@@ -55,6 +55,8 @@ android {
                 signingConfig = signingConfigs.getByName("debug")
             }
             isMinifyEnabled = true
+            // 移除未使用的资源，进一步压缩体积。
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

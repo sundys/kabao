@@ -156,6 +156,20 @@ integration_test/      # 集成测试（真机/模拟器）
 docs/backup-format.md  # 备份格式规范
 ```
 
+## 减小体积与提升运行速度
+
+- **始终使用 Release 模式分发**：Debug 包含 JIT 内核与调试符号，体积数倍于 Release 且运行慢（AOT）
+- **按架构分包**：`--split-per-abi` 后单架构包约为全架构合包的 1/3
+- 项目已启用的优化：R8 混淆（`minifyEnabled`）、资源收缩（`shrinkResources`）、图标字体树摇、Dart 符号混淆剥离（`--obfuscate --split-debug-info`）
+- 本地构建优化版 APK：
+
+```powershell
+flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols
+```
+
+实测体积：arm64 ≈ 19 MB、armv7 ≈ 16 MB、x86_64 ≈ 21 MB（未优化前合包 52 MB）。
+`build/symbols` 中的符号文件请妥善保存，用于还原混淆后的崩溃堆栈。
+
 ## 许可证
 
 本项目采用 **CC BY-NC-ND 4.0**（署名—非商业性使用—禁止演绎）协议发布。
