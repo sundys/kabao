@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Restore signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kabao-release.jks"
+          cat > android/key.properties <<EOF
+          storeFile=$RUNNER_TEMP/kabao-release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - name: Build signed AAB
+        run: flutter build appbundle --release
+
+      # 按 CPU 架构分别构建 APK：armv8 / armv7 / x86-64。
+      - name: Build signed APK (arm64-v8a)
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64
+
+      - name: Build signed APK (armeabi-v7a)
+        run: flutter build apk --release --split-per-abi --target-platform android-arm
+
+      - name: Build signed APK (x86_64)
+        run: flutter build apk --release --split-per-abi --target-platform android-x64
+
+      - name: Remove signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/kabao-release.jks" android/key.properties
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Rename artifacts
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+             dist/kabao-${{ steps.version.outputs.VERSION }}-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
+             dist/kabao-${{ steps.version.outputs.VERSION }}-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk \
+             dist/kabao-${{ steps.version.outputs.VERSION }}-x86_64.apk
+          cp build/app/outputs/bundle/release/app-release.aab \
+             dist/kabao-${{ steps.version.outputs.VERSION }}.aab
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/kabao-*-arm64-v8a.apk
+            dist/kabao-*-armeabi-v7a.apk
+            dist/kabao-*-x86_64.apk
+            dist/kabao-*.aab
+          generate_release_notes: true
