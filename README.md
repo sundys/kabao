@@ -170,6 +170,14 @@ flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build
 实测体积：arm64 ≈ 19 MB、armv7 ≈ 16 MB、x86_64 ≈ 21 MB（未优化前合包 52 MB）。
 `build/symbols` 中的符号文件请妥善保存，用于还原混淆后的崩溃堆栈。
 
+## 已知问题
+
+- **构建日志中的 KGP 警告**：`file_picker 10.x` 尚未迁移到 Flutter 的 Built-in Kotlin，
+  构建时会输出 KGP 警告。该警告**目前不影响构建与运行**，仅表示未来 Flutter 大版本
+  可能不再兼容。彻底消除需升级 `file_picker ≥ 12`，但其依赖链（win32 6.x）与本项目
+  的 `flutter_secure_storage 9.x` 冲突，且 `file_picker 11/12` 需要更高的 AGP 与
+  Compile SDK 37。待 `flutter_secure_storage` 升级到 10+ 并提升 AGP 后一并处理。
+
 ## 许可证
 
 本项目采用 **CC BY-NC-ND 4.0**（署名—非商业性使用—禁止演绎）协议发布。

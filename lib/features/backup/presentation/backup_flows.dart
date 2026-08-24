@@ -60,7 +60,7 @@ final class BackupFlows {
         ],
         documents: await documentRepo?.listAll() ?? const [],
       );
-      // Encrypt fully before touching the destination.
+      // 先在本地完成加密，再写入目标位置。
       final contents = await BackupCodec.encode(
         snapshot: snapshot,
         password: password,
