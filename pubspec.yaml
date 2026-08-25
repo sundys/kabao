@@ -49,8 +49,8 @@ dependencies:
   webdav_client: ^1.2.2
   dio: ^5.11.0
   url_launcher: ^6.3.2
-  http: ^1.6.0
   local_auth_android: ^2.0.9
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:

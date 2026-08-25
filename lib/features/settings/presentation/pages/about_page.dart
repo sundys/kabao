@@ -1,35 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/app_config.dart';
 
-class AboutPage extends ConsumerStatefulWidget {
+/// 版本号从应用包信息动态读取，随构建自动更新。
+final _versionProvider = FutureProvider<String>((ref) async {
+  final info = await PackageInfo.fromPlatform();
+  return info.version;
+});
+
+class AboutPage extends ConsumerWidget {
   const AboutPage({super.key});
 
   @override
-  ConsumerState<AboutPage> createState() => _AboutPageState();
-}
-
-class _AboutPageState extends ConsumerState<AboutPage> {
-  bool _checking = false;
-  UpdateCheckResult? _result;
-
-  Future<void> _checkUpdate() async {
-    setState(() => _checking = true);
-    final result = await checkForUpdate();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _checking = false;
-      _result = result;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final version = ref.watch(_versionProvider).value ?? AppConfig.appVersion;
     return Scaffold(
       appBar: AppBar(title: const Text('关于卡包')),
       body: ListView(
@@ -46,7 +34,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  '${AppConfig.appName} ${AppConfig.appVersion}',
+                  '${AppConfig.appName} $version',
                   style: theme.textTheme.titleLarge,
                 ),
               ],
@@ -54,7 +42,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
           ),
           const SizedBox(height: 24),
           Text(
-            '卡包是一款本地加密的银行卡信息管理应用。'
+            '卡包是一款本地加密的银行卡与证件信息管理应用。'
             '所有数据仅以加密形式保存在您的设备上，'
             '不连接任何业务服务器，不上传任何分析数据。',
             style: theme.textTheme.bodyMedium,
@@ -67,48 +55,13 @@ class _AboutPageState extends ConsumerState<AboutPage> {
             onTap: () => launchUrl(Uri.parse(AppConfig.githubHomepage)),
           ),
           ListTile(
-            leading: const Icon(Icons.new_releases_outlined),
-            title: const Text('检查更新'),
-            subtitle: _updateSubtitle == null ? null : Text(_updateSubtitle!),
-            trailing: _checking
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : null,
-            onTap: _checking ? null : _checkUpdate,
-          ),
-          ListTile(
             leading: const Icon(Icons.download_outlined),
             title: const Text('最新版本下载'),
             subtitle: const Text(AppConfig.latestReleaseUrl),
             onTap: () => launchUrl(Uri.parse(AppConfig.latestReleaseUrl)),
           ),
-          if (_result != null && _result!.hasUpdate && mounted)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FilledButton.icon(
-                onPressed: () => launchUrl(
-                  Uri.parse(_result!.releaseUrl ?? AppConfig.githubHomepage),
-                ),
-                icon: const Icon(Icons.open_in_new),
-                label: Text('前往下载新版本 v${_result!.latestVersion}'),
-              ),
-            ),
         ],
       ),
     );
-  }
-
-  String? get _updateSubtitle {
-    final result = _result;
-    if (result == null || result.failed) {
-      return '手动检查 GitHub 上的最新版本';
-    }
-    if (result.hasUpdate) {
-      return '发现新版本 v${result.latestVersion}';
-    }
-    return '当前已是最新版本';
   }
 }
