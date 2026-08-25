@@ -130,6 +130,7 @@ final class BackupService {
       extra: {
         'card_type': cardTypeToWire(card.cardType),
         'category_id': card.categoryId,
+        'sort_order': card.sortOrder,
       },
     ),
     json: card.payloadJson(),

@@ -20,7 +20,44 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
     if (repo == null) {
       return const [];
     }
-    return repo.listByCategory(categoryId);
+    final cards = await repo.listByCategory(categoryId);
+    // 默认按姓名排序；已手动排序的卡片按手动序号优先。
+    cards.sort((a, b) {
+      final aManual = a.sortOrder > 0;
+      final bManual = b.sortOrder > 0;
+      if (aManual != bManual) {
+        return aManual ? -1 : 1;
+      }
+      if (aManual && bManual && a.sortOrder != b.sortOrder) {
+        return a.sortOrder.compareTo(b.sortOrder);
+      }
+      return (a.holderName ?? '').compareTo(b.holderName ?? '');
+    });
+    return cards;
+  }
+
+  /// 长按拖动排序：按新顺序写入手动序号并持久化。
+  Future<void> reorder(int oldIndex, int newIndex) async {
+    final repo = ref.read(cardRepositoryProvider);
+    final current = [...?state.value];
+    if (repo == null ||
+        oldIndex < 0 ||
+        newIndex < 0 ||
+        oldIndex >= current.length) {
+      return;
+    }
+    if (newIndex == oldIndex || newIndex >= current.length) {
+      return;
+    }
+    final item = current.removeAt(oldIndex);
+    current.insert(newIndex, item);
+
+    final orders = <String, int>{};
+    for (var i = 0; i < current.length; i++) {
+      orders[current[i].id] = i + 1;
+    }
+    await repo.updateSortOrders(orders);
+    ref.invalidateSelf();
   }
 
   Future<bool> save(CardRecord card) async {
@@ -28,7 +65,12 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
     if (repo == null) {
       return false;
     }
-    await repo.save(card);
+    // 编辑保存时保留已有的手动排序。
+    final previous = state.value?.where((c) => c.id == card.id).firstOrNull;
+    final merged = previous != null && card.sortOrder == 0
+        ? card.withSortOrder(previous.sortOrder)
+        : card;
+    await repo.save(merged);
     ref.invalidateSelf();
     // Reminder tiers may change with the new dates; idempotent recompute.
     await ref.read(reminderCoordinatorProvider).recompute();

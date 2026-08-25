@@ -19,7 +19,7 @@ final class EncryptedDatabase {
   factory EncryptedDatabase.forTest(Database database, AeadCipher aead) =>
       EncryptedDatabase._(database, aead);
 
-  static const int dbVersion = 1;
+  static const int dbVersion = 2;
 
   final Database _db;
   final AeadCipher _aead;
@@ -38,8 +38,24 @@ final class EncryptedDatabase {
                 await database.execute('PRAGMA foreign_keys = ON');
               },
               onCreate: (database, version) => createSchema(database),
+              onUpgrade: (database, oldVersion, newVersion) =>
+                  migrate(database, oldVersion, newVersion),
             ));
     return EncryptedDatabase._(db, aead ?? AeadCipher());
+  }
+
+  /// Incremental schema migrations. Exposed for tests.
+  static Future<void> migrate(
+    Database database,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      // v2: 卡片手动排序。
+      await database.execute(
+        'ALTER TABLE cards ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0',
+      );
+    }
   }
 
   /// Creates all vault tables. Exposed so tests can build the same schema
@@ -62,6 +78,7 @@ final class EncryptedDatabase {
                     category_id TEXT NOT NULL REFERENCES categories(id)
                       ON DELETE RESTRICT,
                     card_type TEXT NOT NULL,
+                    sort_order INTEGER NOT NULL DEFAULT 0,
                     created_at INTEGER NOT NULL,
                     updated_at INTEGER NOT NULL,
                     model_version INTEGER NOT NULL,

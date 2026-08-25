@@ -289,6 +289,7 @@ VaultSnapshot _snapshotFromJson(Map<String, Object?> json) {
         categoryId: item['categoryId']! as String,
         cardType: cardTypeFromWire(item['cardType']! as String),
         holderName: item['holderName'] as String?,
+        sortOrder: (item['sortOrder'] as num?)?.toInt() ?? 0,
         cardNumber: item['cardNumber']! as String,
         expiryMonth: (item['expiryMonth'] as num?)?.toInt(),
         expiryYear: (item['expiryYear'] as num?)?.toInt(),

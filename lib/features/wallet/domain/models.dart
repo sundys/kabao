@@ -79,6 +79,7 @@ class CardRecord {
     required this.cardType,
     required this.cardNumber,
     this.holderName,
+    this.sortOrder = 0,
     this.expiryMonth,
     this.expiryYear,
     this.cvv,
@@ -101,6 +102,9 @@ class CardRecord {
   /// 持卡人姓名（可选）。
   final String? holderName;
 
+  /// 手动排序序号；0 表示未手动排序。
+  final int sortOrder;
+
   /// Expiry month 01-12; null when not provided.
   final int? expiryMonth;
 
@@ -118,9 +122,28 @@ class CardRecord {
   final DateTime updatedAt;
   final int modelVersion;
 
+  /// 返回仅更新手动排序序号的副本（编辑保存时不丢失排序）。
+  CardRecord withSortOrder(int value) => CardRecord(
+    id: id,
+    categoryId: categoryId,
+    cardType: cardType,
+    cardNumber: cardNumber,
+    holderName: holderName,
+    sortOrder: value,
+    expiryMonth: expiryMonth,
+    expiryYear: expiryYear,
+    cvv: cvv,
+    uShieldExpiryDate: uShieldExpiryDate,
+    note: note,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    modelVersion: modelVersion,
+  );
+
   String payloadJson() => jsonEncode({
     'holderName': holderName,
     'cardNumber': cardNumber,
+    'sortOrder': sortOrder,
     'expiryMonth': expiryMonth,
     'expiryYear': expiryYear,
     'cvv': cvv,
@@ -142,6 +165,7 @@ class CardRecord {
       cardType: cardTypeFromWire(metadata['card_type']! as String),
       cardNumber: payload['cardNumber']! as String,
       holderName: payload['holderName'] as String?,
+      sortOrder: (metadata['sort_order'] as num?)?.toInt() ?? 0,
       expiryMonth: (payload['expiryMonth'] as num?)?.toInt(),
       expiryYear: (payload['expiryYear'] as num?)?.toInt(),
       cvv: payload['cvv'] as String?,

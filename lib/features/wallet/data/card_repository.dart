@@ -80,5 +80,21 @@ final class CardRepository {
     ),
   );
 
+  /// 批量持久化手动排序（同一分类内全部卡片重排序号）。
+  Future<void> updateSortOrders(Map<String, int> orders) =>
+      _db.runInTransaction(() async {
+        for (final entry in orders.entries) {
+          await _db.updateWhere(
+            table,
+            {
+              'sort_order': entry.value,
+              'updated_at': DateTime.now().millisecondsSinceEpoch,
+            },
+            where: 'id = ?',
+            whereArgs: [entry.key],
+          );
+        }
+      });
+
   Future<int> delete(String id) => _db.deleteRecord(table, id);
 }

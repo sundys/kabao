@@ -70,11 +70,14 @@ class CategoryDetailPage extends ConsumerWidget {
               ),
             );
           }
-          return ListView.separated(
+          return ReorderableListView.builder(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
             itemCount: cards.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            onReorderItem: (oldIndex, newIndex) => ref
+                .read(cardsProvider(category.id).notifier)
+                .reorder(oldIndex, newIndex),
             itemBuilder: (context, index) => _CardTile(
+              key: ValueKey(cards[index].id),
               card: cards[index],
               categoryColor: CategoryColors.forId(category.id),
             ),
@@ -205,7 +208,7 @@ class _DocTile extends ConsumerWidget {
 }
 
 class _CardTile extends ConsumerWidget {
-  const _CardTile({required this.card, required this.categoryColor});
+  const _CardTile({super.key, required this.card, required this.categoryColor});
 
   final CardRecord card;
   final Color categoryColor;
@@ -213,42 +216,61 @@ class _CardTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final masked = CardNumberValidation.maskForList(card.cardNumber);
-    // 显示顺序：姓名 → 卡号 → 有效期（排版与证件卡一致）。
+    // 显示顺序：姓名 → 卡号 → 有效期（同行追加备注，超 6 字截断）。
     final hasName = card.holderName != null && card.holderName!.isNotEmpty;
     final expiryText = card.expiryMonth == null || card.expiryYear == null
         ? ''
         : '${card.expiryMonth.toString().padLeft(2, '0')}/'
               '${(card.expiryYear! % 100).toString().padLeft(2, '0')}';
-    return Material(
-      color: categoryColor.withValues(alpha: 0.35),
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push('/wallet/card/${card.id}', extra: card),
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 8,
-          ),
-          leading: const Icon(Icons.credit_card),
-          title: Text(
-            hasName ? card.holderName! : masked,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          isThreeLine: expiryText.isNotEmpty,
-          subtitle: Text(
-            hasName
-                ? (expiryText.isEmpty ? masked : '$masked\n有效期 $expiryText')
-                : (expiryText.isEmpty ? '' : '有效期 $expiryText'),
-          ),
-          trailing: IconButton(
-            icon: const Icon(Icons.copy_outlined),
-            tooltip: '复制卡号',
-            onPressed: () =>
-                ClipboardService.copyCardNumber(context, ref, card.cardNumber),
+    final remark = card.note ?? '';
+    final remarkShort = remark.length > 6
+        ? '${remark.substring(0, 6)}…'
+        : remark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: categoryColor.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/wallet/card/${card.id}', extra: card),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 8,
+            ),
+            leading: const Icon(Icons.credit_card),
+            title: Text(
+              hasName ? card.holderName! : masked,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            isThreeLine: expiryText.isNotEmpty,
+            subtitle: Text(_buildSubtitle(masked, expiryText, remarkShort)),
+            trailing: IconButton(
+              icon: const Icon(Icons.copy_outlined),
+              tooltip: '复制卡号',
+              onPressed: () => ClipboardService.copyCardNumber(
+                context,
+                ref,
+                card.cardNumber,
+              ),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  static String _buildSubtitle(
+    String masked,
+    String expiryText,
+    String remarkShort,
+  ) {
+    // 有效期与备注同行；备注为空时仅显示有效期。
+    final expiryPart = expiryText.isEmpty ? '' : '有效期 $expiryText';
+    if (remarkShort.isEmpty) {
+      return expiryPart;
+    }
+    return expiryPart.isEmpty ? remarkShort : '$expiryPart $remarkShort';
   }
 }
