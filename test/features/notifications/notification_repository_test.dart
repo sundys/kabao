@@ -8,7 +8,10 @@ import 'package:kabao/features/wallet/data/card_repository.dart';
 import 'package:kabao/features/wallet/data/category_repository.dart';
 import 'package:kabao/features/notifications/logic/reminders_service.dart';
 import 'package:kabao/features/wallet/domain/models.dart';
+import 'package:kabao/shared/services/local_notification_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import '../../helpers/recording_notification_gateway.dart';
 
 void main() {
   setUpAll(() {
@@ -126,7 +129,10 @@ void main() {
       now: now,
     );
     expect(second, isEmpty);
-    expect((await notifications.listActive()).length, 1);
+    expect(
+      (await notifications.listActive(now: DateTime(2027, 6, 2, 10))).length,
+      1,
+    );
     expect(card.cardNumber, '6222000012345678'); // sanity
   });
 
@@ -149,5 +155,143 @@ void main() {
     await notifications.delete('n1');
     list = await notifications.listActive();
     expect(list, isEmpty);
+    // Deletion retains the dedupe key so a later reminder recomputation does
+    // not recreate the notification the user explicitly removed.
+    expect(
+      await notifications.existingDedupeKeys(),
+      contains('ushield:card-1:60'),
+    );
+    expect(
+      await notifications.deletedDedupeKeys(),
+      contains('ushield:card-1:60'),
+    );
+  });
+
+  test('未到期的定时提醒不提前显示在应用内通知中心', () async {
+    await notifications.insertIfAbsent(
+      AppNotification(
+        id: 'future',
+        type: ReminderType.cardExpiry,
+        cardId: 'card-1',
+        dedupeKey: 'expiry:card-1:90',
+        title: 'future',
+        body: 'future',
+        createdAt: DateTime.now(),
+        scheduledFor: DateTime.now().add(const Duration(days: 1)),
+      ),
+    );
+    expect(await notifications.listActive(), isEmpty);
+  });
+
+  test('重算会挂载未来系统提醒，并记录成功挂载状态', () async {
+    final card = await seedCard();
+    final gateway = RecordingGateway();
+    final localNotifications = LocalNotificationService(gateway: gateway);
+    await localNotifications.initialize();
+
+    final created = await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: DateTime(2026, 1, 1),
+      localNotifications: localNotifications,
+    );
+
+    expect(created, hasLength(8));
+    expect(gateway.shown, isEmpty);
+    expect(gateway.scheduled, hasLength(8));
+    for (final reminder in created) {
+      expect(
+        (await notifications.findByDedupeKey(
+          reminder.dedupeKey,
+        ))?.systemScheduledAt,
+        isNotNull,
+      );
+    }
+    expect(card.id, 'card-1');
+  });
+
+  test('已到提醒首次展示后记录状态，重复重算不会重复展示', () async {
+    await seedCard();
+    final gateway = RecordingGateway();
+    final localNotifications = LocalNotificationService(gateway: gateway);
+    await localNotifications.initialize();
+    final now = DateTime(2027, 8, 1, 10);
+
+    final first = await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: now,
+      localNotifications: localNotifications,
+    );
+    expect(first, hasLength(4));
+    expect(gateway.shown, hasLength(3));
+    expect(gateway.scheduled, hasLength(1));
+
+    await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: now,
+      localNotifications: localNotifications,
+    );
+    expect(gateway.shown, hasLength(3));
+    expect(gateway.scheduled, hasLength(2));
+  });
+
+  test('系统通知权限恢复后，未成功展示的已到提醒会补发', () async {
+    await seedCard();
+    final gateway = RecordingGateway(permissionGranted: false);
+    final localNotifications = LocalNotificationService(gateway: gateway);
+    await localNotifications.initialize();
+    final now = DateTime(2027, 8, 1, 10);
+
+    await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: now,
+      localNotifications: localNotifications,
+    );
+    expect(gateway.shown, isEmpty);
+
+    gateway.enabled = true;
+    await localNotifications.refreshPermission();
+    await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: now,
+      localNotifications: localNotifications,
+    );
+    expect(gateway.shown, hasLength(3));
+  });
+
+  test('已成功挂载的定时提醒到期后不会因恢复前台而重复展示', () async {
+    await seedCard();
+    final gateway = RecordingGateway();
+    final localNotifications = LocalNotificationService(gateway: gateway);
+    await localNotifications.initialize();
+    final beforeDue = DateTime(2027, 8, 31, 8, 30);
+
+    await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: beforeDue,
+      localNotifications: localNotifications,
+    );
+    expect(gateway.scheduled, hasLength(1));
+    expect(gateway.shown, hasLength(3));
+
+    await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: DateTime(2027, 8, 31, 10),
+      localNotifications: localNotifications,
+    );
+    expect(gateway.shown, hasLength(3));
   });
 }

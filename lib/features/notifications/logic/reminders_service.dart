@@ -8,6 +8,7 @@ import '../../wallet/domain/models.dart';
 import '../data/notification_repository.dart';
 import '../domain/models.dart';
 import '../domain/reminder_rules.dart';
+import '../../../shared/services/local_notification_service.dart';
 
 /// Recomputes reminders for every card and certificate document. Idempotent:
 /// existing dedupe keys are never re-inserted, so repeated calls on
@@ -19,10 +20,16 @@ Future<List<AppNotification>> recomputeReminders({
   DocumentRepository? documents,
   DateTime? now,
   List<String>? knownDedupeKeys,
+  LocalNotificationService? localNotifications,
 }) async {
   final at = now ?? DateTime.now();
+  final systemNotifications = localNotifications;
   final existing = knownDedupeKeys ?? await notifications.existingDedupeKeys();
+  final deleted = systemNotifications == null
+      ? const <String>[]
+      : await notifications.deletedDedupeKeys();
   final existingSet = Set<String>.from(existing);
+  final deletedSet = Set<String>.from(deleted);
   final created = <AppNotification>[];
 
   for (final type in CardType.values) {
@@ -34,8 +41,46 @@ Future<List<AppNotification>> recomputeReminders({
       if (categories != null) {
         category = await categories.getById(card.categoryId);
       }
-      for (final plan in plansForCard(card, at)) {
+      for (final plan in plansForCard(
+        card,
+        at,
+        includeFuture: systemNotifications != null,
+      )) {
         if (existingSet.contains(plan.dedupeKey)) {
+          if (!deletedSet.contains(plan.dedupeKey)) {
+            final existingNotification = await notifications.findByDedupeKey(
+              plan.dedupeKey,
+            );
+            final notification = buildNotification(
+              id: existingNotification?.id ?? 'system-${plan.dedupeKey}',
+              plan: plan,
+              category: category,
+              card: card,
+              now: at,
+            );
+            if (_systemDeliveryAt(plan).isAfter(at)) {
+              final armed = await systemNotifications?.schedule(
+                notification,
+                now: at,
+              );
+              if (armed == true && existingNotification != null) {
+                await notifications.markSystemScheduled(
+                  existingNotification.id,
+                );
+              }
+            } else if (existingNotification != null &&
+                existingNotification.systemScheduledAt == null &&
+                existingNotification.systemDeliveredAt == null) {
+              final delivered = await systemNotifications?.present(
+                notification,
+              );
+              if (delivered == true) {
+                await notifications.markSystemDelivered(
+                  existingNotification.id,
+                );
+              }
+            }
+          }
           continue;
         }
         final notification = buildNotification(
@@ -48,6 +93,19 @@ Future<List<AppNotification>> recomputeReminders({
         if (await notifications.insertIfAbsent(notification)) {
           existingSet.add(plan.dedupeKey);
           created.add(notification);
+          // [schedule] posts already-missed reminders immediately, while a
+          // reminder reached before 09:00 today remains armed for 09:00.
+          final deliveredOrArmed = await systemNotifications?.schedule(
+            notification,
+            now: at,
+          );
+          if (deliveredOrArmed == true) {
+            if (_systemDeliveryAt(plan).isAfter(at)) {
+              await notifications.markSystemScheduled(notification.id);
+            } else {
+              await notifications.markSystemDelivered(notification.id);
+            }
+          }
         }
       }
     }
@@ -62,8 +120,41 @@ Future<List<AppNotification>> recomputeReminders({
     if (categories != null) {
       category = await categories.getById(doc.categoryId);
     }
-    for (final plan in plansForDocument(doc.id, doc.validTo, at)) {
+    for (final plan in plansForDocument(
+      doc.id,
+      doc.validTo,
+      at,
+      includeFuture: systemNotifications != null,
+    )) {
       if (existingSet.contains(plan.dedupeKey)) {
+        if (!deletedSet.contains(plan.dedupeKey)) {
+          final existingNotification = await notifications.findByDedupeKey(
+            plan.dedupeKey,
+          );
+          final notification = buildDocumentNotification(
+            id: existingNotification?.id ?? 'system-${plan.dedupeKey}',
+            plan: plan,
+            category: category,
+            idNumber: doc.idNumber,
+            now: at,
+          );
+          if (_systemDeliveryAt(plan).isAfter(at)) {
+            final armed = await systemNotifications?.schedule(
+              notification,
+              now: at,
+            );
+            if (armed == true && existingNotification != null) {
+              await notifications.markSystemScheduled(existingNotification.id);
+            }
+          } else if (existingNotification != null &&
+              existingNotification.systemScheduledAt == null &&
+              existingNotification.systemDeliveredAt == null) {
+            final delivered = await systemNotifications?.present(notification);
+            if (delivered == true) {
+              await notifications.markSystemDelivered(existingNotification.id);
+            }
+          }
+        }
         continue;
       }
       final notification = buildDocumentNotification(
@@ -76,9 +167,24 @@ Future<List<AppNotification>> recomputeReminders({
       if (await notifications.insertIfAbsent(notification)) {
         existingSet.add(plan.dedupeKey);
         created.add(notification);
+        // Keep the Android delivery time consistent with card reminders.
+        final deliveredOrArmed = await systemNotifications?.schedule(
+          notification,
+          now: at,
+        );
+        if (deliveredOrArmed == true) {
+          if (_systemDeliveryAt(plan).isAfter(at)) {
+            await notifications.markSystemScheduled(notification.id);
+          } else {
+            await notifications.markSystemDelivered(notification.id);
+          }
+        }
       }
     }
   }
 
   return created;
 }
+
+DateTime _systemDeliveryAt(ReminderPlan plan) =>
+    DateTime(plan.dueAt.year, plan.dueAt.month, plan.dueAt.day, 9);

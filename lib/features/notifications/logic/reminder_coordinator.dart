@@ -6,6 +6,7 @@ import '../../backup/domain/webdav_config.dart';
 import '../../backup/logic/cloud_backup_service.dart';
 import '../../backup/logic/webdav_provider.dart';
 import '../../wallet/domain/models.dart';
+import '../../../shared/services/local_notification_service.dart';
 import 'notifications_provider.dart';
 import 'reminders_service.dart';
 
@@ -30,11 +31,14 @@ final class ReminderCoordinator {
       return;
     }
     try {
+      final localNotifications = LocalNotificationService.instance;
+      await localNotifications.initialize();
       await recomputeReminders(
         cards: cards,
         categories: categories,
         notifications: notifications,
         documents: documents,
+        localNotifications: localNotifications,
       );
       _ref.invalidate(notificationsProvider);
     } catch (_) {

@@ -86,6 +86,7 @@ class _FirstSetupPageState extends ConsumerState<FirstSetupPage> {
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
+                      key: const Key('setup-password'),
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       autofillHints: const [AutofillHints.newPassword],
@@ -114,6 +115,7 @@ class _FirstSetupPageState extends ConsumerState<FirstSetupPage> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      key: const Key('setup-confirm'),
                       controller: _confirmController,
                       obscureText: _obscurePassword,
                       autofillHints: const [AutofillHints.newPassword],

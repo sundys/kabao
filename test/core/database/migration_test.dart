@@ -52,4 +52,45 @@ void main() {
     expect(columns.any((c) => c['name'] == 'sort_order'), isTrue);
     await db.close();
   });
+
+  test('v2 → v3 迁移：通知表增加系统投递状态列', () async {
+    final db = await openDatabase(
+      inMemoryDatabasePath,
+      version: 2,
+      onCreate: (database, _) async {
+        await database.execute('''
+          CREATE TABLE notifications (
+            id TEXT PRIMARY KEY NOT NULL,
+            card_id TEXT,
+            dedupe_key TEXT NOT NULL UNIQUE,
+            read_at INTEGER,
+            deleted_at INTEGER,
+            created_at INTEGER NOT NULL,
+            scheduled_for INTEGER,
+            model_version INTEGER NOT NULL,
+            payload BLOB NOT NULL
+          )
+        ''');
+      },
+    );
+
+    await EncryptedDatabase.migrate(db, 2, 3);
+
+    final columns = await db.rawQuery('PRAGMA table_info(notifications)');
+    expect(columns.any((c) => c['name'] == 'system_scheduled_at'), isTrue);
+    expect(columns.any((c) => c['name'] == 'system_delivered_at'), isTrue);
+    await db.close();
+  });
+
+  test('新建库直接包含系统投递状态列', () async {
+    final db = await openDatabase(
+      inMemoryDatabasePath,
+      version: EncryptedDatabase.dbVersion,
+      onCreate: (database, _) => EncryptedDatabase.createSchema(database),
+    );
+    final columns = await db.rawQuery('PRAGMA table_info(notifications)');
+    expect(columns.any((c) => c['name'] == 'system_scheduled_at'), isTrue);
+    expect(columns.any((c) => c['name'] == 'system_delivered_at'), isTrue);
+    await db.close();
+  });
 }

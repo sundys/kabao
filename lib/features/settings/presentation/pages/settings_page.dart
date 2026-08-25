@@ -8,6 +8,7 @@ import '../../../../app/theme/theme_mode_controller.dart';
 import '../../../auth/logic/auth_controller.dart';
 import '../../../auth/models/auth_state.dart';
 import '../../../backup/presentation/backup_flows.dart';
+import '../../../../shared/services/local_notification_service.dart';
 import '../../logic/wipe_service.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -241,6 +242,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             value: biometricEnabled,
             onChanged: _biometricsSupported == true ? _toggleBiometric : null,
+          ),
+          ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('系统通知'),
+            subtitle: const Text('管理到期提醒在 Android 通知栏的显示权限'),
+            onTap: () async {
+              await LocalNotificationService.instance.initialize();
+              await LocalNotificationService.instance.openSettings();
+            },
           ),
           const Divider(indent: 16, endIndent: 16),
           const _SectionHeader(title: '数据'),

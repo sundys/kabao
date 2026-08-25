@@ -138,6 +138,6 @@ void main() {
       now: now,
     );
     expect(again, isEmpty);
-    expect((await notifications.listActive()).length, 2);
+    expect((await notifications.listActive(now: now)).length, 2);
   });
 }

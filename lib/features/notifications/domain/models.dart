@@ -15,6 +15,8 @@ final class AppNotification {
     this.readAt,
     this.deletedAt,
     this.scheduledFor,
+    this.systemScheduledAt,
+    this.systemDeliveredAt,
     this.modelVersion = 1,
   });
 
@@ -30,6 +32,12 @@ final class AppNotification {
   final DateTime? readAt;
   final DateTime? deletedAt;
   final DateTime? scheduledFor;
+
+  /// When the Android system alarm was successfully armed for this reminder.
+  final DateTime? systemScheduledAt;
+
+  /// When an immediate Android banner was successfully handed to the system.
+  final DateTime? systemDeliveredAt;
   final int modelVersion;
 
   bool get isRead => readAt != null;
@@ -43,6 +51,8 @@ final class AppNotification {
     'deleted_at': deletedAt?.millisecondsSinceEpoch,
     'created_at': createdAt.millisecondsSinceEpoch,
     'scheduled_for': scheduledFor?.millisecondsSinceEpoch,
+    'system_scheduled_at': systemScheduledAt?.millisecondsSinceEpoch,
+    'system_delivered_at': systemDeliveredAt?.millisecondsSinceEpoch,
     'model_version': modelVersion,
     'payload': utf8.encode(
       jsonEncode({'title': title, 'body': body, 'type': type.name}),
@@ -74,6 +84,16 @@ final class AppNotification {
       scheduledFor: epoch(row['scheduled_for']) == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(epoch(row['scheduled_for'])!),
+      systemScheduledAt: epoch(row['system_scheduled_at']) == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(
+              epoch(row['system_scheduled_at'])!,
+            ),
+      systemDeliveredAt: epoch(row['system_delivered_at']) == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(
+              epoch(row['system_delivered_at'])!,
+            ),
       modelVersion: epoch(row['model_version']) ?? 1,
     );
   }

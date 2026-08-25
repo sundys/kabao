@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/repositories_providers.dart';
 import '../domain/models.dart';
+import '../../../shared/services/local_notification_service.dart';
 
 /// Active (non-deleted) notifications, newest first. Rebuilds whenever the
 /// repository appears (unlock) or is invalidated by mutations/recompute.
@@ -35,6 +36,8 @@ class NotificationsController extends AsyncNotifier<List<AppNotification>> {
       return;
     }
     await repo.delete(notification.id);
+    await LocalNotificationService.instance.initialize();
+    await LocalNotificationService.instance.cancel(notification);
     ref.invalidateSelf();
   }
 }

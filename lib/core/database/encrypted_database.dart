@@ -19,7 +19,7 @@ final class EncryptedDatabase {
   factory EncryptedDatabase.forTest(Database database, AeadCipher aead) =>
       EncryptedDatabase._(database, aead);
 
-  static const int dbVersion = 2;
+  static const int dbVersion = 3;
 
   final Database _db;
   final AeadCipher _aead;
@@ -50,10 +50,20 @@ final class EncryptedDatabase {
     int oldVersion,
     int newVersion,
   ) async {
-    if (oldVersion < 2) {
+    if (oldVersion < 2 && newVersion >= 2) {
       // v2: 卡片手动排序。
       await database.execute(
         'ALTER TABLE cards ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+    if (oldVersion < 3 && newVersion >= 3) {
+      // v3: record whether an Android alarm was armed or an immediate banner
+      // was delivered. These are non-sensitive delivery timestamps.
+      await database.execute(
+        'ALTER TABLE notifications ADD COLUMN system_scheduled_at INTEGER',
+      );
+      await database.execute(
+        'ALTER TABLE notifications ADD COLUMN system_delivered_at INTEGER',
       );
     }
   }
@@ -94,6 +104,8 @@ final class EncryptedDatabase {
                     deleted_at INTEGER,
                     created_at INTEGER NOT NULL,
                     scheduled_for INTEGER,
+                    system_scheduled_at INTEGER,
+                    system_delivered_at INTEGER,
                     model_version INTEGER NOT NULL,
                     payload BLOB NOT NULL
                   )

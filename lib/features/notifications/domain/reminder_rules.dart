@@ -39,13 +39,26 @@ final class ReminderPlan {
           : 'docexpiry'}:$cardId:$tier';
 }
 
+/// Enumerates every possible reminder key for one card or document record.
+///
+/// The same identifier is used for card records and certificate documents,
+/// but their key prefixes keep their notification IDs distinct. This allows a
+/// changed or deleted record to cancel both posted banners and pending alarms
+/// without retaining sensitive field values outside the encrypted database.
+List<String> reminderDedupeKeysFor(String recordId) => [
+  for (final tier in cardExpiryReminderTiers) 'expiry:$recordId:$tier',
+  for (final tier in reminderTiers) 'ushield:$recordId:$tier',
+  for (final tier in documentReminderTiers) 'docexpiry:$recordId:$tier',
+];
+
 /// Computes which reminders should exist for a certificate document as of
 /// [today]: three tiers (90/60/30 days) before the validity end date.
 List<ReminderPlan> plansForDocument(
   String documentId,
   DateTime? validTo,
-  DateTime today,
-) {
+  DateTime today, {
+  bool includeFuture = false,
+}) {
   if (validTo == null) {
     return const [];
   }
@@ -54,7 +67,7 @@ List<ReminderPlan> plansForDocument(
   final daysUntil = deadline.difference(today0).inDays;
   return [
     for (final tier in documentReminderTiers)
-      if (daysUntil <= tier && daysUntil >= -gracePeriodDays)
+      if ((includeFuture || daysUntil <= tier) && daysUntil >= -gracePeriodDays)
         ReminderPlan(
           type: ReminderType.documentExpiry,
           cardId: documentId,
@@ -81,7 +94,11 @@ DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 /// A tier fires once when `daysUntilDeadline <= tier` (and within the grace
 /// window), so reminders are never lost when the app cannot run in the
 /// background; dedupe keys guarantee each tier is stored only once.
-List<ReminderPlan> plansForCard(CardRecord card, DateTime today) {
+List<ReminderPlan> plansForCard(
+  CardRecord card,
+  DateTime today, {
+  bool includeFuture = false,
+}) {
   final today0 = _dateOnly(today);
   final plans = <ReminderPlan>[];
 
@@ -91,7 +108,8 @@ List<ReminderPlan> plansForCard(CardRecord card, DateTime today) {
     }
     final daysUntil = _dateOnly(deadline).difference(today0).inDays;
     for (final tier in tiers) {
-      if (daysUntil <= tier && daysUntil >= -gracePeriodDays) {
+      if ((includeFuture || daysUntil <= tier) &&
+          daysUntil >= -gracePeriodDays) {
         plans.add(
           ReminderPlan(
             type: type,

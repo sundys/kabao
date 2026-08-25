@@ -31,7 +31,6 @@ class _KabaoAppState extends ConsumerState<KabaoApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    LocalNotificationService.instance.initialize();
   }
 
   @override
@@ -57,7 +56,9 @@ class _KabaoAppState extends ConsumerState<KabaoApp>
       case AppLifecycleState.resumed:
         _cancelLockTimer();
         if (!biometricBusy) {
-          ref.read(reminderCoordinatorProvider).recompute();
+          LocalNotificationService.instance.refreshPermission().then(
+            (_) => ref.read(reminderCoordinatorProvider).recompute(),
+          );
         }
       case AppLifecycleState.inactive:
       case AppLifecycleState.detached:

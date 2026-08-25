@@ -180,6 +180,7 @@ class _LockPageState extends ConsumerState<LockPage> {
                   ),
                   const SizedBox(height: 24),
                   TextField(
+                    key: const Key('lock-password'),
                     controller: _passwordController,
                     obscureText: _obscurePassword,
                     autofillHints: const [AutofillHints.password],

@@ -62,10 +62,10 @@ void main() {
       expect(Validators.expiry('0829'), isNotNull);
     });
 
-    test('CVV 为 3-4 位数字', () {
+    test('CVV 为 3 位数字', () {
       expect(Validators.cvv(null), isNull);
       expect(Validators.cvv('123'), isNull);
-      expect(Validators.cvv('1234'), isNull);
+      expect(Validators.cvv('1234'), isNotNull);
       expect(Validators.cvv('12'), isNotNull);
       expect(Validators.cvv('12345'), isNotNull);
       expect(Validators.cvv('12a'), isNotNull);

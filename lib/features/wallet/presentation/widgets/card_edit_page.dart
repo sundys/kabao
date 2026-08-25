@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../shared/widgets/input_formatters.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -148,6 +149,7 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
           padding: const EdgeInsets.all(16),
           children: [
             TextFormField(
+              key: const Key('card-name-field'),
               controller: _nameController,
               maxLength: 20,
               textInputAction: TextInputAction.next,
@@ -158,6 +160,7 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              key: const Key('card-number-field'),
               controller: _numberController,
               keyboardType: TextInputType.number,
               maxLength: 23, // 19 digits + separators
@@ -176,6 +179,7 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
               children: [
                 Expanded(
                   child: TextFormField(
+                    key: const Key('card-expiry-field'),
                     controller: _expiryController,
                     keyboardType: TextInputType.datetime,
                     inputFormatters: const [
@@ -191,9 +195,11 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextFormField(
+                    key: const Key('card-cvv-field'),
                     controller: _cvvController,
                     keyboardType: TextInputType.number,
-                    maxLength: 4,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    maxLength: 3,
                     obscureText: true,
                     decoration: const InputDecoration(
                       labelText: 'CVV',
@@ -206,6 +212,7 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              key: const Key('card-u-shield-field'),
               controller: _uShieldController,
               keyboardType: TextInputType.datetime,
               inputFormatters: const [
@@ -219,6 +226,7 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              key: const Key('card-note-field'),
               controller: _noteController,
               maxLines: 3,
               maxLength: CardRecordNoteLimit.max,

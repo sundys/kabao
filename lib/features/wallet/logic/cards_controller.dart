@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../app/providers/repositories_providers.dart';
 import '../../notifications/logic/reminder_coordinator.dart';
+import '../../../shared/services/local_notification_service.dart';
 import '../domain/models.dart';
 
 /// Loads and mutates the card records of one category.
@@ -65,12 +66,18 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
     if (repo == null) {
       return false;
     }
+    // Remove alarms before a date edit so stale tiers cannot fire.
+    await LocalNotificationService.instance.initialize();
+    await LocalNotificationService.instance.cancelRemindersFor(card.id);
     // 编辑保存时保留已有的手动排序。
     final previous = state.value?.where((c) => c.id == card.id).firstOrNull;
     final merged = previous != null && card.sortOrder == 0
         ? card.withSortOrder(previous.sortOrder)
         : card;
     await repo.save(merged);
+    // A date edit reuses the same dedupe keys, so discard old snapshots before
+    // recomputation can create reminders for the new deadlines.
+    await ref.read(notificationRepositoryProvider)?.purgeByCard(card.id);
     ref.invalidateSelf();
     // Reminder tiers may change with the new dates; idempotent recompute.
     await ref.read(reminderCoordinatorProvider).recompute();
@@ -102,7 +109,9 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
       // Drop reminders belonging to the deleted card.
       final notifications = ref.read(notificationRepositoryProvider);
       await notifications?.deleteByCard(id);
-      ref.read(reminderCoordinatorProvider).recompute();
+      await LocalNotificationService.instance.initialize();
+      await LocalNotificationService.instance.cancelRemindersFor(id);
+      await ref.read(reminderCoordinatorProvider).recompute();
       return true;
     }
     return false;

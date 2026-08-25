@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/vault_providers.dart';
 import '../../auth/logic/auth_controller.dart';
+import '../../../shared/services/local_notification_service.dart';
 
 final wipeServiceProvider = Provider<WipeService>((ref) => WipeService(ref));
 
@@ -15,6 +16,8 @@ final class WipeService {
   final Ref _ref;
 
   Future<void> wipeAll() async {
+    await LocalNotificationService.instance.initialize();
+    await LocalNotificationService.instance.cancelAll();
     // 1. Business rows (if the vault happens to be attached).
     final db = _ref.read(vaultDatabaseProvider).value;
     if (db != null) {

@@ -111,7 +111,7 @@ class CardRecord {
   /// Two-digit year value converted to full year (2000 + YY).
   final int? expiryYear;
 
-  /// 3-4 digits.
+  /// Exactly 3 digits.
   final String? cvv;
 
   /// Local date without timezone for the U-shield certificate expiry.

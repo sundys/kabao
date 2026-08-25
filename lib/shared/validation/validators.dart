@@ -48,14 +48,14 @@ final class Validators {
     return null;
   }
 
-  /// 3-4 digits, optional.
+  /// Exactly 3 digits, optional.
   static String? cvv(String? raw) {
     if (raw == null || raw.trim().isEmpty) {
       return null;
     }
     final value = raw.trim();
-    if (!RegExp(r'^\d{3,4}$').hasMatch(value)) {
-      return 'CVV 应为 3-4 位数字';
+    if (!RegExp(r'^\d{3}$').hasMatch(value)) {
+      return 'CVV 应为 3 位数字';
     }
     return null;
   }

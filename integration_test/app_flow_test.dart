@@ -53,11 +53,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('添加卡片'));
     await tester.pumpAndSettle();
-    final fields = find.byType(TextFormField);
-    await tester.enterText(fields.at(0), '6222 0000 1234 5678');
-    await tester.enterText(fields.at(1), '08/29');
-    await tester.enterText(fields.at(2), '123');
-    await tester.enterText(fields.at(3), '2027/3/8');
+    await tester.enterText(
+      find.byKey(const Key('card-number-field')),
+      '6222 0000 1234 5678',
+    );
+    await tester.enterText(find.byKey(const Key('card-expiry-field')), '08/29');
+    await tester.enterText(find.byKey(const Key('card-cvv-field')), '123');
+    await tester.enterText(
+      find.byKey(const Key('card-u-shield-field')),
+      '2027/03/08',
+    );
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
 

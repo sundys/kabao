@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../app/providers/repositories_providers.dart';
 import '../../notifications/logic/reminder_coordinator.dart';
+import '../../../shared/services/local_notification_service.dart';
 import '../domain/document.dart';
 
 /// Loads and mutates certificate documents of one sub-category.
@@ -28,7 +29,11 @@ class DocumentsController extends AsyncNotifier<List<DocumentRecord>> {
     if (repo == null) {
       return false;
     }
+    await LocalNotificationService.instance.initialize();
+    await LocalNotificationService.instance.cancelRemindersFor(document.id);
     await repo.save(document);
+    // Validity-date edits reuse dedupe keys; rebuild the encrypted snapshots.
+    await ref.read(notificationRepositoryProvider)?.purgeByCard(document.id);
     ref.invalidateSelf();
     // Reminder tiers may change with the new dates; idempotent recompute.
     await ref.read(reminderCoordinatorProvider).recompute();
@@ -60,6 +65,8 @@ class DocumentsController extends AsyncNotifier<List<DocumentRecord>> {
       ref.invalidateSelf();
       final notifications = ref.read(notificationRepositoryProvider);
       await notifications?.deleteByCard(id);
+      await LocalNotificationService.instance.initialize();
+      await LocalNotificationService.instance.cancelRemindersFor(id);
       await ref.read(reminderCoordinatorProvider).recompute();
       return true;
     }
