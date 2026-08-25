@@ -21,7 +21,7 @@ CardRecord _card() {
 }
 
 void main() {
-  testWidgets('填了姓名的卡片：标题显示姓名，副标题包含卡号、有效期与截断备注', (tester) async {
+  testWidgets('填了姓名的卡片：标题显示姓名，副标题第一行卡号、第二行有效期与备注', (tester) async {
     final card = _card();
     await tester.pumpWidget(
       MaterialApp(
@@ -32,17 +32,16 @@ void main() {
     );
 
     expect(find.text('张三'), findsOneWidget);
-    // 脱敏卡号必须出现在副标题中。
+    // 第一行：脱敏卡号。
     expect(find.textContaining('6222 **** **** 3699'), findsOneWidget);
-    expect(find.textContaining('有效期 02/27'), findsOneWidget);
-    // 备注超过 6 字仅显示前 6 字。
-    expect(find.textContaining('工商银行工资…'), findsOneWidget);
+    // 第二行：有效期 + 截断备注（超 6 字）。
+    expect(find.textContaining('有效期 02/27 工商银行工资…'), findsOneWidget);
   });
 
   group('buildSubtitle 拼接规则', () {
     final masked = CardNumberValidation.maskForList('6222365623223699');
 
-    test('有姓名：卡号 + 有效期 + 备注', () {
+    test('有姓名：第一行卡号，第二行有效期 + 备注', () {
       expect(
         CardTile.buildSubtitle(
           showCardNumber: true,
@@ -50,11 +49,11 @@ void main() {
           expiryText: '02/27',
           remarkShort: '工商银行工资…',
         ),
-        '$masked 有效期 02/27 工商银行工资…',
+        '$masked\n有效期 02/27 工商银行工资…',
       );
     });
 
-    test('备注为空时只显示卡号与有效期', () {
+    test('备注为空时第二行只有有效期', () {
       expect(
         CardTile.buildSubtitle(
           showCardNumber: true,
@@ -62,7 +61,7 @@ void main() {
           expiryText: '02/27',
           remarkShort: '',
         ),
-        '$masked 有效期 02/27',
+        '$masked\n有效期 02/27',
       );
     });
 

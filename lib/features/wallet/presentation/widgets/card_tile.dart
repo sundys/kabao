@@ -76,23 +76,24 @@ class CardTile extends ConsumerWidget {
     );
   }
 
-  /// 副标题：卡号（已填姓名时才重复显示）→ 有效期 → 备注（同行，超 6 字截断）。
+  /// 副标题：第一行卡号（已填姓名时才重复显示）；第二行有效期 + 备注（超 6 字截断）。
   static String buildSubtitle({
     required bool showCardNumber,
     required String masked,
     required String expiryText,
     required String remarkShort,
   }) {
-    final parts = <String>[];
-    if (showCardNumber) {
-      parts.add(masked);
-    }
+    final detailParts = <String>[];
     if (expiryText.isNotEmpty) {
-      parts.add('有效期 $expiryText');
+      detailParts.add('有效期 $expiryText');
     }
     if (remarkShort.isNotEmpty) {
-      parts.add(remarkShort);
+      detailParts.add(remarkShort);
     }
-    return parts.join(' ');
+    final detailLine = detailParts.join(' ');
+    if (!showCardNumber || detailLine.isEmpty) {
+      return detailLine;
+    }
+    return '$masked\n$detailLine';
   }
 }
