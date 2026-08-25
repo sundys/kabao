@@ -244,8 +244,15 @@ class _CardTile extends ConsumerWidget {
               hasName ? card.holderName! : masked,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            isThreeLine: expiryText.isNotEmpty,
-            subtitle: Text(_buildSubtitle(masked, expiryText, remarkShort)),
+            isThreeLine: true,
+            subtitle: Text(
+              _buildSubtitle(
+                showCardNumber: !hasName,
+                masked: masked,
+                expiryText: expiryText,
+                remarkShort: remarkShort,
+              ),
+            ),
             trailing: IconButton(
               icon: const Icon(Icons.copy_outlined),
               tooltip: '复制卡号',
@@ -261,16 +268,23 @@ class _CardTile extends ConsumerWidget {
     );
   }
 
-  static String _buildSubtitle(
-    String masked,
-    String expiryText,
-    String remarkShort,
-  ) {
-    // 有效期与备注同行；备注为空时仅显示有效期。
-    final expiryPart = expiryText.isEmpty ? '' : '有效期 $expiryText';
-    if (remarkShort.isEmpty) {
-      return expiryPart;
+  /// 副标题：卡号（已填姓名时才重复显示）→ 有效期 → 备注（同行，超 6 字截断）。
+  static String _buildSubtitle({
+    required bool showCardNumber,
+    required String masked,
+    required String expiryText,
+    required String remarkShort,
+  }) {
+    final parts = <String>[];
+    if (showCardNumber) {
+      parts.add(masked);
     }
-    return expiryPart.isEmpty ? remarkShort : '$expiryPart $remarkShort';
+    if (expiryText.isNotEmpty) {
+      parts.add('有效期 $expiryText');
+    }
+    if (remarkShort.isNotEmpty) {
+      parts.add(remarkShort);
+    }
+    return parts.join(' ');
   }
 }
