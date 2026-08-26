@@ -70,4 +70,45 @@ void main() {
       expect(afterDelete.text, '2020.12.03-2028.05.1');
     });
   });
+
+  group('BoundedSeparatorAutoFormatter', () {
+    test('有效期月份限制为 01-12，同时保留自动补 /', () {
+      const f = BoundedSeparatorAutoFormatter(
+        [2, 2],
+        ['/'],
+        minValues: [1, null],
+        maxValues: [12, null],
+      );
+      var value = const TextEditingValue(text: '');
+      for (final ch in '0829'.split('')) {
+        value = f.formatEditUpdate(value, input(value.text + ch));
+      }
+      expect(value.text, '08/29');
+      expect(f.formatEditUpdate(input('1'), input('13')).text, '1');
+    });
+
+    test('U 盾日期限制年份、月份和日期范围，同时保留自动补 /', () {
+      const f = BoundedSeparatorAutoFormatter(
+        [4, 2, 2],
+        ['/', '/', '/'],
+        minValues: [2000, 1, 1],
+        maxValues: [2999, 12, 31],
+        requiredPrefixes: ['2', null, null],
+      );
+      var value = const TextEditingValue(text: '');
+      for (final ch in '20270308'.split('')) {
+        value = f.formatEditUpdate(value, input(value.text + ch));
+      }
+      expect(value.text, '2027/03/08');
+      expect(f.formatEditUpdate(input(''), input('3689')).text, '');
+      expect(
+        f.formatEditUpdate(input('2027/1'), input('2027/13')).text,
+        '2027/1',
+      );
+      expect(
+        f.formatEditUpdate(input('2027/12/3'), input('2027/12/32')).text,
+        '2027/12/3',
+      );
+    });
+  });
 }

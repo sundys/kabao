@@ -183,7 +183,12 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
                     controller: _expiryController,
                     keyboardType: TextInputType.datetime,
                     inputFormatters: const [
-                      SeparatorAutoFormatter([2, 2], ['/']),
+                      BoundedSeparatorAutoFormatter(
+                        [2, 2],
+                        ['/'],
+                        minValues: [1, null],
+                        maxValues: [12, null],
+                      ),
                     ],
                     decoration: const InputDecoration(
                       labelText: '有效期 (MM/YY)',
@@ -216,7 +221,13 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
               controller: _uShieldController,
               keyboardType: TextInputType.datetime,
               inputFormatters: const [
-                SeparatorAutoFormatter([4, 2, 2], ['/', '/', '/']),
+                BoundedSeparatorAutoFormatter(
+                  [4, 2, 2],
+                  ['/', '/', '/'],
+                  minValues: [2000, 1, 1],
+                  maxValues: [2999, 12, 31],
+                  requiredPrefixes: ['2', null, null],
+                ),
               ],
               decoration: const InputDecoration(
                 labelText: 'U 盾证书到期日 (yyyy/MM/dd)',
