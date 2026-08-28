@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/auth/logic/auth_controller.dart';
 import '../features/notifications/logic/reminder_coordinator.dart';
+import '../features/settings/logic/lock_timeout_controller.dart';
 import '../shared/services/clipboard_service.dart';
 import '../shared/services/local_notification_service.dart';
 import 'providers/repositories_providers.dart';
@@ -21,10 +22,6 @@ class KabaoApp extends ConsumerStatefulWidget {
 
 class _KabaoAppState extends ConsumerState<KabaoApp>
     with WidgetsBindingObserver {
-  /// 界面被覆盖（切后台/下拉通知栏）后延迟锁定的时间；期间回到应用会取消
-  /// 锁定，避免频繁重复解锁。
-  static const Duration lockDelay = Duration(seconds: 10);
-
   Timer? _lockTimer;
 
   @override
@@ -70,10 +67,21 @@ class _KabaoAppState extends ConsumerState<KabaoApp>
     _lockTimer?.cancel();
     // Best-effort: remove a copied card number from the clipboard.
     ClipboardService.clear();
-    _lockTimer = Timer(lockDelay, () {
+    // 界面被覆盖（切后台/下拉通知栏）后延迟锁定；期间回到应用会取消锁定，
+    // 避免频繁重复解锁。延迟时长由设置页的「超时时间」决定。
+    final delay = _lockDelay;
+    if (delay <= Duration.zero) {
+      ref.read(authControllerProvider.notifier).lock();
+      return;
+    }
+    _lockTimer = Timer(delay, () {
       ref.read(authControllerProvider.notifier).lock();
     });
   }
+
+  /// 用户选择的锁定延迟；设置尚未读出时按更严格的默认档位处理。
+  Duration get _lockDelay =>
+      (ref.read(lockTimeoutProvider).value ?? LockTimeout.fallback).duration;
 
   void _cancelLockTimer() {
     _lockTimer?.cancel();
@@ -84,6 +92,9 @@ class _KabaoAppState extends ConsumerState<KabaoApp>
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider).value ?? ThemeMode.system;
+    // Keep the persisted lock timeout warm so backgrounding never has to wait
+    // on secure storage before starting the timer.
+    ref.watch(lockTimeoutProvider);
     // First trigger: right after unlock when the encrypted DB is attached.
     ref.listen(vaultDatabaseProvider, (previous, next) {
       if (previous?.value == null && next.value != null) {

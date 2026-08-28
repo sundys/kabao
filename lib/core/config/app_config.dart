@@ -3,7 +3,7 @@ abstract final class AppConfig {
   static const String appName = '卡包';
 
   /// 兜底版本号；正常情况下关于页从包信息动态读取。
-  static const String appVersion = '1.0.1';
+  static const String appVersion = '1.0.4';
 
   /// Open-source homepage and release source.
   static const String githubRepo = 'sundys/kabao';

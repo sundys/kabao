@@ -1,5 +1,6 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.io.InputStreamReader
 
 plugins {
     id("com.android.application")
@@ -9,10 +10,12 @@ plugins {
 
 // Release signing material is provided out-of-band (CI secrets or local
 // android/key.properties); it must never be committed to the repository.
+// Read as UTF-8 so non-ASCII keystore paths survive; Properties.load(stream)
+// would decode them as ISO-8859-1 and mangle the path.
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("key.properties")
     if (file.exists()) {
-        load(FileInputStream(file))
+        InputStreamReader(FileInputStream(file), Charsets.UTF_8).use { load(it) }
     }
 }
 

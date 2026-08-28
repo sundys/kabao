@@ -94,9 +94,22 @@ jobs:
           cp build/app/outputs/bundle/release/app-release.aab \
              dist/kabao-${{ steps.version.outputs.VERSION }}.aab
 
+      - name: Prepare release notes
+        id: notes
+        run: |
+          # 手写的更新说明（docs/release-notes/<tag>.md）优先；缺失时留空，
+          # 由 generate_release_notes 生成的提交列表兜底。
+          NOTES="docs/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$NOTES" ]; then
+            cp "$NOTES" dist/RELEASE_NOTES.md
+          else
+            : > dist/RELEASE_NOTES.md
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: dist/RELEASE_NOTES.md
           files: |
             dist/kabao-*-arm64-v8a.apk
             dist/kabao-*-armeabi-v7a.apk

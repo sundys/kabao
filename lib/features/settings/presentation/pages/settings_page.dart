@@ -9,6 +9,7 @@ import '../../../auth/logic/auth_controller.dart';
 import '../../../auth/models/auth_state.dart';
 import '../../../backup/presentation/backup_flows.dart';
 import '../../../../shared/services/local_notification_service.dart';
+import '../../logic/lock_timeout_controller.dart';
 import '../../logic/wipe_service.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -68,6 +69,37 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
     if (selected != null && selected != current) {
       await ref.read(themeModeProvider.notifier).setMode(selected);
+    }
+  }
+
+  /// 单选弹窗：实心圆点为当前档位，空心圆圈为未选中。选择后立即持久化，
+  /// 状态一直保留到用户改选其它档位。
+  Future<void> _pickLockTimeout(BuildContext context, WidgetRef ref) async {
+    final current = ref.read(lockTimeoutProvider).value ?? LockTimeout.fallback;
+    final selected = await showDialog<LockTimeout>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('超时时间'),
+        children: [
+          for (final timeout in LockTimeout.values)
+            ListTile(
+              leading: Icon(
+                timeout == current
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                color: timeout == current
+                    ? Theme.of(dialogContext).colorScheme.primary
+                    : null,
+              ),
+              title: Text(timeout.label),
+              selected: timeout == current,
+              onTap: () => Navigator.of(dialogContext).pop(timeout),
+            ),
+        ],
+      ),
+    );
+    if (selected != null && selected != current) {
+      await ref.read(lockTimeoutProvider.notifier).setTimeout(selected);
     }
   }
 
@@ -216,6 +248,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final biometricEnabled = ref.watch(biometricEnabledProvider).value ?? false;
+    final lockTimeout =
+        ref.watch(lockTimeoutProvider).value ?? LockTimeout.fallback;
+    final lockTimeoutSubtitle = lockTimeout == LockTimeout.immediate
+        ? '切换后台后立即锁定数据库'
+        : '切换后台 ${lockTimeout.label}后锁定数据库';
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
@@ -242,6 +279,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             value: biometricEnabled,
             onChanged: _biometricsSupported == true ? _toggleBiometric : null,
+          ),
+          ListTile(
+            leading: const Icon(Icons.timer_outlined),
+            title: const Text('超时时间'),
+            subtitle: Text(lockTimeoutSubtitle),
+            onTap: () => _pickLockTimeout(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.notifications_outlined),
