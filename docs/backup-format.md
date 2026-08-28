@@ -41,16 +41,26 @@
 
 ```json
 {
-  "categories": [ { "id": "...", "cardType": "debit|credit", "name": "...",
+  "categories": [ { "id": "...", "cardType": "debit|credit|document", "name": "...",
                     "sortOrder": 0, "createdAt": 0, "updatedAt": 0,
                     "modelVersion": 1 } ],
   "cards": [ { "id": "...", "categoryId": "...", "cardType": "...",
                "cardNumber": "纯数字", "expiryMonth": null, "expiryYear": null,
                "cvv": null, "uShieldExpiryDate": "yyyy/M/d 或 null",
                "note": null, "createdAt": 0, "updatedAt": 0,
-               "modelVersion": 1 } ]
+               "modelVersion": 1 } ],
+  "documents": [ { "id": "...", "categoryId": "...", "holderName": "...",
+                   "idNumber": "纯数字", "issuer": "...",
+                   "validFrom": "yyyy.MM.dd 或 null",
+                   "validTo": "yyyy.MM.dd 或 null",
+                   "validityPermanent": true,
+                   "createdAt": 0, "updatedAt": 0, "modelVersion": 1 } ]
 }
 ```
+
+`documents` 为可选数组（无证件时不写入）。`validityPermanent` 仅在证件标记为
+「长期有效」时出现，此时 `validFrom`/`validTo` 均为 `null`；缺少该字段的旧备份
+按非长期有效导入。`idNumber` 始终是无分隔符的连续数字，分组只发生在展示层。
 
 通知不在备份内：它们由提醒规则从卡片数据幂等重建。
 

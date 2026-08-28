@@ -245,6 +245,7 @@ Map<String, Object?> _snapshotToJson(VaultSnapshot s) => {
           'validTo': d.validTo == null
               ? null
               : DocumentRecord.formatDate(d.validTo!),
+          if (d.validityIsPermanent) 'validityPermanent': true,
           'createdAt': d.createdAt.millisecondsSinceEpoch,
           'updatedAt': d.updatedAt.millisecondsSinceEpoch,
           'modelVersion': d.modelVersion,
@@ -322,6 +323,7 @@ VaultSnapshot _snapshotFromJson(Map<String, Object?> json) {
           issuer: item['issuer'] as String? ?? '',
           validFrom: DocumentRecord.parseDate(item['validFrom'] as String?),
           validTo: DocumentRecord.parseDate(item['validTo'] as String?),
+          validityIsPermanent: item['validityPermanent'] == true,
           createdAt: DateTime.fromMillisecondsSinceEpoch(
             (item['createdAt'] as num).toInt(),
           ),

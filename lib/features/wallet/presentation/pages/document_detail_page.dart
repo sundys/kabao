@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/services/clipboard_service.dart';
-import '../../../../shared/utils/card_number_utils.dart';
+import '../../../../shared/utils/document_id_utils.dart';
 import '../../domain/document.dart';
 import '../../logic/documents_controller.dart';
 
@@ -15,15 +15,11 @@ class DocumentDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    String fmt(DateTime? d) => d == null
-        ? ''
-        : '${d.year}.${d.month.toString().padLeft(2, '0')}.'
-              '${d.day.toString().padLeft(2, '0')}';
     final rows = <(String, String)>[
       if (document.holderName.isNotEmpty) ('姓名', document.holderName),
-      ('证件号', CardNumberValidation.groupForDisplay(document.idNumber)),
+      ('证件号', DocumentIdFormatting.groupForDisplay(document.idNumber)),
       if (document.issuer.isNotEmpty) ('签发机关', document.issuer),
-      ('有效期限', '${fmt(document.validFrom)} - ${fmt(document.validTo)}'),
+      ('有效期限', document.validityLabel),
       if (document.remark != null && document.remark!.isNotEmpty)
         ('备注', document.remark!),
     ];

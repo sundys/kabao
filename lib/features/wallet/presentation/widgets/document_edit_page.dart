@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/utils/document_id_utils.dart';
 import '../../../../shared/validation/validators.dart';
 import '../../../../shared/widgets/input_formatters.dart';
 import '../../domain/document.dart';
@@ -31,14 +31,18 @@ class _DocumentEditPageState extends ConsumerState<DocumentEditPage> {
   late final TextEditingController _remarkController;
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
+  bool _permanentValidity = false;
 
   @override
   void initState() {
     super.initState();
     final doc = widget.document;
     _nameController = TextEditingController(text: doc.holderName);
-    _idNumberController = TextEditingController(text: doc.idNumber);
+    _idNumberController = TextEditingController(
+      text: DocumentIdFormatting.groupForDisplay(doc.idNumber),
+    );
     _issuerController = TextEditingController(text: doc.issuer);
+    _permanentValidity = doc.validityIsPermanent;
     _validityController = TextEditingController(
       text: doc.validFrom == null || doc.validTo == null
           ? ''
@@ -64,39 +68,42 @@ class _DocumentEditPageState extends ConsumerState<DocumentEditPage> {
     }
     setState(() => _saving = true);
     try {
-      final parts = _validityController.text.trim().split('-');
       // 防御性清理：剔除可能被输入法带入的多余符号。
       final issuer = _issuerController.text.trim().replaceFirst(
         RegExp(r'^\$+'),
         '',
       );
-      final saved = widget.document.copyWith(
+      DateTime? validFrom;
+      DateTime? validTo;
+      if (!_permanentValidity) {
+        final parts = _validityController.text.trim().split('-');
+        validFrom = DocumentRecord.parseDate(parts[0]);
+        validTo = DocumentRecord.parseDate(parts[1]);
+      }
+      // 证件号入库前归一为纯数字，分组只是显示层的事。
+      final idNumber = DocumentIdFormatting.normalize(_idNumberController.text);
+      final now = DateTime.now();
+      final source = widget.document;
+      final saved = DocumentRecord(
+        id: source.id,
+        categoryId: source.categoryId,
         holderName: _nameController.text.trim(),
-        idNumber: _idNumberController.text.trim(),
+        idNumber: idNumber,
         issuer: issuer,
-        validFrom: DocumentRecord.parseDate(parts[0]),
-        validTo: DocumentRecord.parseDate(parts[1]),
-        updatedAt: DateTime.now(),
-      );
-      // 备注单独保存（copyWith 不处理可空覆盖）。
-      final withRemark = DocumentRecord(
-        id: saved.id,
-        categoryId: saved.categoryId,
-        holderName: saved.holderName,
-        idNumber: saved.idNumber,
-        issuer: saved.issuer,
-        validFrom: saved.validFrom,
-        validTo: saved.validTo,
+        // 长期有效时两个日期都写空，覆盖掉此前录入过的日期。
+        validFrom: validFrom,
+        validTo: validTo,
+        validityIsPermanent: _permanentValidity,
         remark: _remarkController.text.trim().isEmpty
             ? null
             : _remarkController.text.trim(),
-        createdAt: saved.createdAt,
-        updatedAt: saved.updatedAt,
-        modelVersion: saved.modelVersion,
+        createdAt: source.createdAt,
+        updatedAt: now,
+        modelVersion: source.modelVersion,
       );
       final ok = await ref
           .read(documentsProvider(widget.document.categoryId).notifier)
-          .save(withRemark);
+          .save(saved);
       if (!mounted) {
         return;
       }
@@ -137,16 +144,23 @@ class _DocumentEditPageState extends ConsumerState<DocumentEditPage> {
               key: const Key('doc-id-number'),
               controller: _idNumberController,
               keyboardType: TextInputType.number,
-              maxLength: DocumentRecord.maxIdNumberLength,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: const [
+                // 402356 20120226 3038：6 + 8 + 剩余，分组只影响显示，
+                // 存库与复制都是连续数字。
+                SeparatorAutoFormatter(DocumentIdFormatting.groupSizes, [
+                  DocumentIdFormatting.separator,
+                  DocumentIdFormatting.separator,
+                ]),
+              ],
               decoration: const InputDecoration(
                 labelText: '证件号',
-                hintText: '连续输入数字即可',
+                hintText: '连续输入数字，自动按 6/8/尾号分组',
                 counterText: '',
               ),
               validator: (v) {
-                final value = v?.trim() ?? '';
-                if (value.isEmpty || !RegExp(r'^\d{1,20}$').hasMatch(value)) {
+                final digits = DocumentIdFormatting.normalize(v ?? '');
+                if (digits.isEmpty ||
+                    digits.length > DocumentRecord.maxIdNumberLength) {
                   return '证件号仅支持数字，最长 ${DocumentRecord.maxIdNumberLength} 位';
                 }
                 return null;
@@ -166,7 +180,9 @@ class _DocumentEditPageState extends ConsumerState<DocumentEditPage> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              key: const Key('doc-validity'),
               controller: _validityController,
+              enabled: !_permanentValidity,
               keyboardType: TextInputType.datetime,
               inputFormatters: const [
                 // yyyy.MM.dd-yyyy.MM.dd: 4+2+2 | - | 4+2+2 = 16 digits.
@@ -175,11 +191,35 @@ class _DocumentEditPageState extends ConsumerState<DocumentEditPage> {
                   ['.', '.', '-', '.', '.'],
                 ),
               ],
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: '有效期限',
-                hintText: '2016.08.08-2036.08.08',
+                hintText: _permanentValidity
+                    ? '已选长期有效'
+                    : '2016.08.08-2036.08.08',
               ),
-              validator: Validators.documentValidityRange,
+              // 勾选长期有效后不再校验日期格式。
+              validator: _permanentValidity
+                  ? null
+                  : Validators.documentValidityRange,
+            ),
+            CheckboxListTile(
+              key: const Key('doc-permanent-validity'),
+              value: _permanentValidity,
+              title: const Text(DocumentRecord.permanentValidityLabel),
+              subtitle: const Text('勾选后清空并锁定上方日期，保存为「长期有效」'),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (checked) {
+                setState(() {
+                  _permanentValidity = checked ?? false;
+                  if (_permanentValidity) {
+                    // 立即清空，避免残留日期在取消勾选后被误当成有效输入。
+                    _validityController.clear();
+                  }
+                });
+                // 切换后重跑校验，清掉上一次的日期格式错误提示。
+                _formKey.currentState?.validate();
+              },
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -194,6 +234,7 @@ class _DocumentEditPageState extends ConsumerState<DocumentEditPage> {
             ),
             const SizedBox(height: 24),
             FilledButton(
+              key: const Key('doc-save'),
               onPressed: _saving ? null : _save,
               child: _saving
                   ? const SizedBox(

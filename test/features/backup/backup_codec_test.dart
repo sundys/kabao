@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kabao/core/crypto/kdf_service.dart';
 import 'package:kabao/features/backup/logic/backup_codec.dart';
+import 'package:kabao/features/wallet/domain/document.dart';
 import 'package:kabao/features/wallet/domain/models.dart';
 
 const _fastKdf = KdfParams(
@@ -38,6 +39,30 @@ VaultSnapshot sampleSnapshot() {
         updatedAt: now,
       ),
     ],
+    documents: [
+      DocumentRecord(
+        id: 'doc-1',
+        categoryId: 'cat-1',
+        holderName: '张三',
+        idNumber: '402356201202263038',
+        issuer: '中南县公安局',
+        validityIsPermanent: true,
+        remark: '长期有效',
+        createdAt: now,
+        updatedAt: now,
+      ),
+      DocumentRecord(
+        id: 'doc-2',
+        categoryId: 'cat-1',
+        holderName: '李四',
+        idNumber: '402356201202263039',
+        issuer: '中南县公安局',
+        validFrom: DateTime(2022, 2, 25),
+        validTo: DateTime(2038, 2, 25),
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ],
   );
 }
 
@@ -68,6 +93,21 @@ void main() {
     expect(card.cvv, '123');
     expect(card.uShieldExpiryDate, DateTime(2027, 3, 8));
     expect(card.note, '工资卡\n备注行');
+
+    // 证件：长期有效标记与中文字段往返无损，也不被解析成乱码。
+    final permanent = restored.documents.firstWhere((d) => d.id == 'doc-1');
+    expect(permanent.validityIsPermanent, isTrue);
+    expect(permanent.validityLabel, '长期有效');
+    expect(permanent.validFrom, isNull);
+    expect(permanent.validTo, isNull);
+    expect(permanent.holderName, '张三');
+    expect(permanent.issuer, '中南县公安局');
+    expect(permanent.idNumber, '402356201202263038');
+
+    final dated = restored.documents.firstWhere((d) => d.id == 'doc-2');
+    expect(dated.validityIsPermanent, isFalse);
+    expect(dated.validFrom, DateTime(2022, 2, 25));
+    expect(dated.validTo, DateTime(2038, 2, 25));
   });
 
   test('密文中不含明文卡号或分类名', () async {

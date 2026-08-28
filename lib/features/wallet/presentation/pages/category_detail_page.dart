@@ -168,11 +168,8 @@ class _DocTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    String fmt(DateTime? d) => d == null
-        ? ''
-        : '${d.year}.${d.month.toString().padLeft(2, '0')}.'
-              '${d.day.toString().padLeft(2, '0')}';
     final masked = CardNumberValidation.maskForList(document.idNumber);
+    final validity = document.validityLabel;
     return Material(
       color: categoryColor.withValues(alpha: 0.35),
       borderRadius: BorderRadius.circular(16),
@@ -192,10 +189,7 @@ class _DocTile extends ConsumerWidget {
           ),
           isThreeLine: document.holderName.isNotEmpty,
           subtitle: Text(
-            document.holderName.isEmpty
-                ? '${fmt(document.validFrom)} - ${fmt(document.validTo)}'
-                : '$masked\n${fmt(document.validFrom)} - '
-                      '${fmt(document.validTo)}',
+            document.holderName.isEmpty ? validity : '$masked\n$validity',
           ),
           trailing: IconButton(
             icon: const Icon(Icons.copy_outlined),

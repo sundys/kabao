@@ -12,6 +12,7 @@ class DocumentRecord {
     required this.issuer,
     this.validFrom,
     this.validTo,
+    this.validityIsPermanent = false,
     this.remark,
     required this.createdAt,
     required this.updatedAt,
@@ -19,6 +20,9 @@ class DocumentRecord {
   });
 
   static const int maxIdNumberLength = 20;
+
+  /// 长期有效证件在界面与备份中的统一文案。
+  static const String permanentValidityLabel = '长期有效';
 
   final String id;
   final String categoryId;
@@ -32,6 +36,10 @@ class DocumentRecord {
   final DateTime? validFrom;
   final DateTime? validTo;
 
+  /// 长期有效：用户勾选后不录入起止日期，两个日期字段保持为空，到期提醒
+  /// 自然不会生成。
+  final bool validityIsPermanent;
+
   /// 备注（可选）。
   final String? remark;
 
@@ -39,25 +47,18 @@ class DocumentRecord {
   final DateTime updatedAt;
   final int modelVersion;
 
-  DocumentRecord copyWith({
-    required String holderName,
-    String? idNumber,
-    String? issuer,
-    DateTime? validFrom,
-    DateTime? validTo,
-    DateTime? updatedAt,
-  }) => DocumentRecord(
-    id: id,
-    categoryId: categoryId,
-    holderName: holderName,
-    idNumber: idNumber ?? this.idNumber,
-    issuer: issuer ?? this.issuer,
-    validFrom: validFrom ?? this.validFrom,
-    validTo: validTo ?? this.validTo,
-    createdAt: createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-    modelVersion: modelVersion,
-  );
+  /// 有效期限的展示文案：长期有效优先，其次是 `起 - 止`，都没有时为空串。
+  String get validityLabel {
+    if (validityIsPermanent) {
+      return permanentValidityLabel;
+    }
+    if (validFrom == null && validTo == null) {
+      return '';
+    }
+    final from = validFrom == null ? '' : formatDate(validFrom!);
+    final to = validTo == null ? '' : formatDate(validTo!);
+    return '$from - $to';
+  }
 
   String payloadJson() => jsonEncode({
     'holderName': holderName,
@@ -65,6 +66,7 @@ class DocumentRecord {
     'issuer': issuer,
     if (validFrom != null) 'validFrom': formatDate(validFrom!),
     if (validTo != null) 'validTo': formatDate(validTo!),
+    if (validityIsPermanent) 'validityPermanent': true,
     'remark': remark,
   });
 
@@ -81,6 +83,7 @@ class DocumentRecord {
       issuer: payload['issuer'] as String? ?? '',
       validFrom: parseDate(payload['validFrom'] as String?),
       validTo: parseDate(payload['validTo'] as String?),
+      validityIsPermanent: payload['validityPermanent'] == true,
       remark: payload['remark'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         (metadata['created_at']! as num).toInt(),

@@ -110,6 +110,49 @@ void main() {
     expect(blob.contains('421366'), isFalse);
   });
 
+  test('长期有效证件不生成到期提醒，且往返保留标记', () async {
+    final now = DateTime.now();
+    await categories.save(
+      BankCategory(
+        id: 'doc-cat',
+        cardType: CardType.document,
+        name: '身份证',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await documents.save(
+      DocumentRecord(
+        id: 'doc-perm',
+        categoryId: 'doc-cat',
+        holderName: '张三',
+        idNumber: '402356201202263038',
+        issuer: '中南县公安局',
+        validityIsPermanent: true,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    final doc = (await documents.listAll()).single;
+    expect(doc.validityIsPermanent, isTrue);
+    expect(doc.validityLabel, '长期有效');
+    expect(doc.validTo, isNull);
+    // 中文字段解密后无乱码。
+    expect(doc.holderName, '张三');
+    expect(doc.issuer, '中南县公安局');
+
+    expect(plansForDocument(doc.id, doc.validTo, now), isEmpty);
+    final created = await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      documents: documents,
+      now: now,
+    );
+    expect(created, isEmpty);
+  });
+
   test('重算服务为证件生成通知（三档独立去重键）', () async {
     final validTo = DateTime(2027, 8, 8);
     await seedDocument(validTo);
