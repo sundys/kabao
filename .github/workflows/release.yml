@@ -106,6 +106,16 @@ jobs:
             : > dist/RELEASE_NOTES.md
           fi
 
+      - name: Delete stale release for this tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 同一标签重新发布时，复用已存在的 release 会保留旧正文（只换掉
+          # 附件）。先删除再由下一步重建，保证正文与本次 tag 一致。
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release delete "$GITHUB_REF_NAME" --yes
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
