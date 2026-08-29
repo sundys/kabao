@@ -46,7 +46,7 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/gui-v')
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
