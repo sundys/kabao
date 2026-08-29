@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/providers/repositories_providers.dart';
+import '../../notifications/logic/reminder_coordinator.dart';
 import '../../wallet/domain/models.dart';
 import '../../wallet/logic/cards_controller.dart' as wallet_cards;
 import '../../wallet/logic/categories_controller.dart' as wallet_categories;
 import '../../wallet/logic/documents_controller.dart' as wallet_documents;
 import '../logic/backup_codec.dart';
 import '../logic/backup_service.dart';
+import '../logic/csv_import_service.dart';
 
 final class BackupFlows {
   const BackupFlows._();
@@ -144,6 +146,63 @@ final class BackupFlows {
     }
   }
 
+  /// Imports a plaintext CSV migration file. The file is never written back;
+  /// records are validated completely before the encrypted transaction starts.
+  static Future<void> importCsv(
+    BuildContext context,
+    WidgetRef ref,
+    CsvImportKind kind,
+  ) async {
+    final picked = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      withData: false,
+    );
+    final path = picked?.files.singleOrNull?.path;
+    if (path == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final db = ref.read(vaultDatabaseProvider).value;
+      final categoryRepo = ref.read(categoryRepositoryProvider);
+      if (db == null || categoryRepo == null) throw StateError('vault locked');
+      final contents = await File(path).readAsString();
+      final draft = CsvImportService(
+        categories: await categoryRepo.listAll(),
+        database: db,
+      ).prepare(contents: contents, kind: kind);
+      if (!context.mounted) return;
+      if (!draft.isValid) {
+        await _showCsvErrors(context, draft);
+        return;
+      }
+      final confirmed = await _confirmCsv(context, draft);
+      if (confirmed != true || !context.mounted) return;
+      final result = await CsvImportService(
+        categories: await categoryRepo.listAll(),
+        database: db,
+      ).commit(draft);
+      ref.invalidate(wallet_categories.categoriesProvider);
+      ref.invalidate(wallet_cards.cardsProvider);
+      ref.invalidate(wallet_documents.documentsProvider);
+      await ref.read(reminderCoordinatorProvider).recompute();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'CSV 导入完成：新增分类 ${result.categoriesAdded}，新增记录 ${result.cardsAdded}',
+          ),
+        ),
+      );
+    } on FormatException {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('CSV 必须使用 UTF-8 编码')),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('CSV 导入失败，请检查文件后重试')),
+      );
+    }
+  }
+
   static String _errorText(BackupCodecError error) => switch (error) {
     BackupCodecError.authenticationFailed => '备份密码错误或文件已被篡改',
     BackupCodecError.unsupportedFormat => '不是有效的卡包备份文件',
@@ -260,4 +319,55 @@ final class BackupFlows {
       ],
     ),
   );
+
+  static Future<bool?> _confirmCsv(BuildContext context, CsvImportDraft draft) {
+    final kindLabel = draft.kind == CsvImportKind.cards ? '银行卡' : '证件';
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('确认导入$kindLabel'),
+        content: Text(
+          '已通过 ${draft.totalRows} 行全量校验，将导入 ${draft.recordCount} 条记录，'
+          '并创建 ${draft.createdCategoryCount} 个新分类。\n\n'
+          'CSV 可能包含敏感信息，导入后只会以加密形式保存。相同 ID 按更新时间较新者合并，\n'
+          '不会删除现有数据。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('开始导入'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Future<void> _showCsvErrors(
+    BuildContext context,
+    CsvImportDraft draft,
+  ) async {
+    final shown = draft.errors
+        .take(20)
+        .map((e) => '第 ${e.row} 行：${e.field}，${e.message}')
+        .join('\n');
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('CSV 校验失败（${draft.errors.length} 处）'),
+        content: SingleChildScrollView(
+          child: Text('$shown${draft.errors.length > 20 ? '\n……其余错误未显示' : ''}'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
 }

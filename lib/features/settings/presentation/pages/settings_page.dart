@@ -8,6 +8,7 @@ import '../../../../app/theme/theme_mode_controller.dart';
 import '../../../auth/logic/auth_controller.dart';
 import '../../../auth/models/auth_state.dart';
 import '../../../backup/presentation/backup_flows.dart';
+import '../../../backup/logic/csv_import_service.dart';
 import '../../../../shared/services/local_notification_service.dart';
 import '../../logic/lock_timeout_controller.dart';
 import '../../logic/wipe_service.dart';
@@ -308,6 +309,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             title: const Text('导出备份'),
             subtitle: const Text('导出为独立加密的 .kabao 文件'),
             onTap: () => BackupFlows.export(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.table_rows_outlined),
+            title: const Text('导入银行卡 CSV'),
+            subtitle: const Text('按标准模板批量导入借记卡或信用卡'),
+            onTap: () =>
+                BackupFlows.importCsv(context, ref, CsvImportKind.cards),
+          ),
+          ListTile(
+            leading: const Icon(Icons.badge_outlined),
+            title: const Text('导入证件 CSV'),
+            subtitle: const Text('按标准模板批量导入证件卡'),
+            onTap: () =>
+                BackupFlows.importCsv(context, ref, CsvImportKind.documents),
           ),
           ListTile(
             leading: const Icon(Icons.cloud_sync_outlined),

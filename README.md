@@ -35,6 +35,45 @@
 - WebDAV 云备份：测试连接、手动备份、从云端恢复、可选的每日自动备份（显式开关）
 - 备份密码独立于主密码，数据在设备上加密完成后才离开本机
 
+### XLS 转 CSV 工具
+
+项目提供 `tools/xls_to_kabao_csv.py`，可将 Excel 97-2003 的 `.xls` 模板转换为
+卡包可导入的 UTF-8 with BOM CSV。工具只读取本地文件，不联网，也不会在终端打印卡号、
+证件号、CVV 或备注。
+
+先安装依赖：
+
+```powershell
+python -m pip install -r tools/requirements.txt
+```
+
+转换银行卡：
+
+```powershell
+python tools/xls_to_kabao_csv.py 银行卡.xls 银行卡.csv --kind cards
+```
+
+转换证件：
+
+```powershell
+python tools/xls_to_kabao_csv.py 证件.xls 证件.csv --kind documents
+```
+
+默认读取第一个工作表；指定工作表时增加 `--sheet 工作表名称`。输入文件第一行应使用
+项目模板中的中文字段，也兼容旧英文字段。字段后的“（可选）”仅用于说明，转换时会自动
+识别。可选的记录 ID、分类 ID、创建时间和更新时间留空后，由卡包导入时生成或按默认值处理。
+
+模板文件：
+
+- [银行卡模板](templates/kabao-cards-template.csv)
+- [证件模板](templates/kabao-documents-template.csv)
+
+重要：卡号和证件号在 Excel 中必须设置为“文本”格式（或在数字前加英文单引号）。如果
+Excel 已将 16 位以上数字保存为普通数字，可能发生精度丢失；转换工具会拒绝这类数字单元格，
+避免输出错误数据。转换后的 CSV 仍需在卡包内完成全量校验，校验失败时不会写入数据库。
+
+更多字段规则见 [docs/xls-to-csv.md](docs/xls-to-csv.md) 和 [docs/csv-import.md](docs/csv-import.md)。
+
 ### 其他
 - 主题颜色设置：浅色 / 暗色 / 跟随系统
 - 自动锁定超时可自定义：立即 / 30 秒 / 1 分钟 / 2 分钟 / 5 分钟 / 10 分钟（默认 30 秒），超时前返回应用无需重复验证
@@ -152,6 +191,7 @@ lib/
     backup/            # 备份编解码、导入导出、WebDAV
     settings/          # 设置、修改密码、清空数据、关于
   shared/              # 校验工具、格式化、输入格式化器等
+tools/                 # XLS 转 UTF-8 BOM CSV 工具
 test/                  # 单元测试与 Widget 测试
 integration_test/      # 集成测试（真机/模拟器）
 .github/workflows/     # CI 与 Release 工作流
