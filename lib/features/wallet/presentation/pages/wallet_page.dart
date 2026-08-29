@@ -40,6 +40,10 @@ class _WalletPageState extends State<WalletPage>
         ),
         bottom: TabBar(
           controller: _tabController,
+          indicator: _CapsuleTabIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          indicatorSize: TabBarIndicatorSize.label,
           tabs: const [
             Tab(text: '借记卡'),
             Tab(text: '信用卡'),
@@ -67,6 +71,43 @@ class _WalletPageState extends State<WalletPage>
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Paints a short rounded capsule below the selected category label.
+class _CapsuleTabIndicator extends Decoration {
+  const _CapsuleTabIndicator({required this.color});
+
+  final Color color;
+
+  @override
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) =>
+      _CapsuleTabIndicatorPainter(color);
+}
+
+class _CapsuleTabIndicatorPainter extends BoxPainter {
+  _CapsuleTabIndicatorPainter(this.color);
+
+  final Color color;
+
+  static const _height = 6.0;
+  static const _horizontalInset = 8.0;
+  static const _bottomInset = 2.0;
+
+  @override
+  void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
+    final size = configuration.size;
+    if (size == null || size.width <= _horizontalInset * 2) return;
+    final rect = Rect.fromLTWH(
+      offset.dx + _horizontalInset,
+      offset.dy + size.height - _height - _bottomInset,
+      size.width - _horizontalInset * 2,
+      _height,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(_height / 2)),
+      Paint()..color = color,
     );
   }
 }
