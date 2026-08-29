@@ -7,6 +7,9 @@ on:
     paths: [ "XlsToCsvGui/**", ".github/workflows/build-xls2csv.yml" ]
   workflow_dispatch:       # 也允许在 GitHub Actions 页面手动触发
 
+permissions:
+  contents: write          # 创建 Release 需要写权限
+
 jobs:
   build:
     runs-on: windows-latest
