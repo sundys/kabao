@@ -67,6 +67,8 @@ python tools/xls_to_kabao_csv.py 证件.xls 证件.csv --kind documents
 
 - [银行卡模板](templates/kabao-cards-template.csv)
 - [证件模板](templates/kabao-documents-template.csv)
+- [银行卡 Excel 2003 模板](templates/kabao-cards-template.xls)
+- [证件 Excel 2003 模板](templates/kabao-documents-template.xls)
 
 重要：卡号和证件号在 Excel 中必须设置为“文本”格式（或在数字前加英文单引号）。如果
 Excel 已将 16 位以上数字保存为普通数字，可能发生精度丢失；转换工具会拒绝这类数字单元格，

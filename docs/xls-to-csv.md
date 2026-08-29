@@ -2,6 +2,11 @@
 
 `tools/xls_to_kabao_csv.py` 用于把 Excel 97-2003 的 `.xls` 模板转换为可导入卡包的 CSV。输出编码为 **UTF-8 with BOM**，可被 Excel 2003 中文版直接打开。
 
+仓库同时提供可直接填写的 XLS 模板（首行中文表头，卡号/证件号列已设为文本格式）：
+
+- `templates/kabao-cards-template.xls`
+- `templates/kabao-documents-template.xls`
+
 ## 安装依赖
 
 ```powershell

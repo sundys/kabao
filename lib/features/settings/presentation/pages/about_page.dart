@@ -60,6 +60,12 @@ class AboutPage extends ConsumerWidget {
             subtitle: const Text(AppConfig.latestReleaseUrl),
             onTap: () => launchUrl(Uri.parse(AppConfig.latestReleaseUrl)),
           ),
+          ListTile(
+            leading: const Icon(Icons.table_view_outlined),
+            title: const Text('CSV 批量导入模板下载'),
+            subtitle: const Text('银行卡和证件 CSV / XLS 模板'),
+            onTap: () => launchUrl(Uri.parse(AppConfig.importTemplatesUrl)),
+          ),
         ],
       ),
     );
