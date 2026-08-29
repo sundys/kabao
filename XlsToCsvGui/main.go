@@ -1,7 +1,9 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -10,6 +12,32 @@ import (
 	"github.com/lxn/win"
 	"xlstocsv/convert"
 )
+
+//go:embed app.ico
+var icoBytes []byte
+
+// loadAppIcon 加载应用图标, 不依赖 exe 外部文件。
+// ico 内容通过 go:embed 打进 exe, 加载时写到临时文件再读取
+// (walk 的 exe 资源图标 API 在部分系统上不可用);
+// 都失败时返回 nil, 由调用方跳过图标设置 (传 nil 图标会导致 walk panic)。
+func loadAppIcon() *walk.Icon {
+	if len(icoBytes) > 0 {
+		if f, err := os.CreateTemp("", "xls2csv-*.ico"); err == nil {
+			if _, err := f.Write(icoBytes); err == nil {
+				f.Close()
+				if ic, err := walk.NewIconFromFile(f.Name()); err == nil {
+					os.Remove(f.Name())
+					return ic
+				}
+			}
+			f.Close()
+		}
+	}
+	if ic, err := walk.NewIconFromFile("app.ico"); err == nil {
+		return ic
+	}
+	return nil
+}
 
 var (
 	// 现代浅色主题配色
@@ -33,18 +61,9 @@ var (
 )
 
 func main() {
-	// 应用图标: 优先取 exe 内嵌资源(rsrc -ico), 其次项目目录下的 app.ico
-	var appIcon *walk.Icon
-	if ic, err := walk.NewIconFromResourceId(1); err == nil {
-		appIcon = ic
-	} else if ic, err := walk.NewIconFromFile("app.ico"); err == nil {
-		appIcon = ic
-	}
-
-	MainWindow{
+	decl := MainWindow{
 		AssignTo: &mw,
 		Title:    "EXCEL文档转CSV UTF-8 BOM工具",
-		Icon:     appIcon,
 		MinSize:  Size{Width: 660, Height: 460},
 		Size:     Size{Width: 760, Height: 540},
 		Layout:   VBox{Margins: Margins{Left: 18, Top: 16, Right: 18, Bottom: 16}, Spacing: 12},
@@ -113,7 +132,12 @@ func main() {
 				Text:      "就绪。\r\n",
 			},
 		},
-	}.Create()
+	}
+	// 图标: 设置失败不传 nil, 避免 walk 空指针崩溃
+	if icon := loadAppIcon(); icon != nil {
+		decl.Icon = icon
+	}
+	decl.Create()
 
 	// 合成双缓冲: 让 Windows 自底向上合成整个控件树, 消除布局/重绘时的闪烁
 	// (只读 Edit 控件在重绘间隙会露出系统浅色底, 即用户看到的"日志窗口变浅色")
