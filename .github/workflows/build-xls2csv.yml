@@ -3,7 +3,7 @@ name: Build xls2csv GUI
 on:
   push:
     branches: [ "xls2csv-gui" ]
-    tags: [ "v*" ]        # 推送 v 开头的标签时触发发布
+    tags: [ "gui-v*" ]    # 推送 gui-v 开头的标签时触发发布 (避免误触 master 的 Flutter Release)
     paths: [ "XlsToCsvGui/**", ".github/workflows/build-xls2csv.yml" ]
   workflow_dispatch:       # 也允许在 GitHub Actions 页面手动触发
 
