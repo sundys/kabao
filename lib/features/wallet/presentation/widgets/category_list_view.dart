@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../shared/utils/category_colors.dart';
 import '../../../../shared/validation/validators.dart';
+import '../../../../shared/widgets/draggable_fab.dart';
 import '../../domain/models.dart';
 import '../../logic/categories_controller.dart';
 
@@ -64,38 +65,44 @@ class CategoryListView extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider(cardType));
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'create-category-${cardType.name}',
-        onPressed: () => _showCreateDialog(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('新建分类'),
-      ),
-      body: categoriesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const Center(child: Text('加载失败，请重试')),
-        data: (categories) {
-          if (categories.isEmpty) {
-            return _EmptyPlaceholder(cardType: cardType);
-          }
-          return RefreshIndicator(
-            onRefresh: () async =>
-                ref.refresh(categoriesProvider(cardType).future),
-            child: GridView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                childAspectRatio: 1.45,
-              ),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return _CategoryTile(category: category, cardType: cardType);
-              },
-            ),
-          );
-        },
+      body: Stack(
+        children: [
+          categoriesAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) => const Center(child: Text('加载失败，请重试')),
+            data: (categories) {
+              if (categories.isEmpty) {
+                return _EmptyPlaceholder(cardType: cardType);
+              }
+              return RefreshIndicator(
+                onRefresh: () async =>
+                    ref.refresh(categoriesProvider(cardType).future),
+                child: GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 1.45,
+                  ),
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    return _CategoryTile(
+                      category: category,
+                      cardType: cardType,
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          DraggableFab(
+            key: ValueKey('create-category-${cardType.name}'),
+            tooltip: '新建分类',
+            onPressed: () => _showCreateDialog(context, ref),
+          ),
+        ],
       ),
     );
   }

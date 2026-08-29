@@ -50,11 +50,50 @@ class _WalletPageState extends State<WalletPage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          CategoryListView(cardType: CardType.debit),
-          CategoryListView(cardType: CardType.credit),
-          CategoryListView(cardType: CardType.document),
+          _LayeredTab(
+            controller: _tabController,
+            index: 0,
+            child: CategoryListView(cardType: CardType.debit),
+          ),
+          _LayeredTab(
+            controller: _tabController,
+            index: 1,
+            child: CategoryListView(cardType: CardType.credit),
+          ),
+          _LayeredTab(
+            controller: _tabController,
+            index: 2,
+            child: CategoryListView(cardType: CardType.document),
+          ),
         ],
       ),
     );
   }
+}
+
+class _LayeredTab extends StatelessWidget {
+  const _LayeredTab({
+    required this.controller,
+    required this.index,
+    required this.child,
+  });
+
+  final TabController controller;
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: controller.animation!,
+    builder: (context, _) {
+      final distance = (controller.animation!.value - index).abs().clamp(
+        0.0,
+        1.0,
+      );
+      return Transform.translate(
+        offset: Offset((index - controller.animation!.value) * 10, 0),
+        child: Transform.scale(scale: 1 - distance * .018, child: child),
+      );
+    },
+  );
 }

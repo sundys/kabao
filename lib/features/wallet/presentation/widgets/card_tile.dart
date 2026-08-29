@@ -23,6 +23,7 @@ class CardTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tileKey = GlobalKey();
     final masked = CardNumberValidation.maskForList(card.cardNumber);
     // 显示顺序：姓名 → 卡号 → 有效期（同行追加备注，超 6 字截断）。
     final hasName = card.holderName != null && card.holderName!.isNotEmpty;
@@ -37,6 +38,7 @@ class CardTile extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
+        key: tileKey,
         color: categoryColor.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
@@ -68,6 +70,7 @@ class CardTile extends ConsumerWidget {
                 context,
                 ref,
                 card.cardNumber,
+                feedbackContext: tileKey.currentContext,
               ),
             ),
           ),

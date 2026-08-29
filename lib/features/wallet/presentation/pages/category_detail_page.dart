@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/services/clipboard_service.dart';
 import '../../../../shared/utils/card_number_utils.dart';
 import '../../../../shared/utils/category_colors.dart';
+import '../../../../shared/widgets/draggable_fab.dart';
 import '../../domain/models.dart';
 import '../../logic/cards_controller.dart';
 import '../../logic/documents_controller.dart';
@@ -29,65 +30,55 @@ class CategoryDetailPage extends ConsumerWidget {
     final cardsAsync = ref.watch(cardsProvider(category.id));
     return Scaffold(
       appBar: AppBar(title: Text(category.name)),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'add-card-${category.id}',
-        onPressed: () async {
-          final draft = await ref
-              .read(cardsProvider(category.id).notifier)
-              .createDraft(category.cardType);
-          if (!context.mounted) {
-            return;
-          }
-          await context.push<CardRecord?>(
-            '/wallet/card/edit',
-            extra: (card: draft, isNew: true),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('添加卡片'),
-      ),
-      body: cardsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => const Center(child: Text('加载失败，请重试')),
-        data: (cards) {
-          if (cards.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.credit_card_off_outlined,
-                    size: 72,
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
+      body: Stack(
+        children: [
+          cardsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) => const Center(child: Text('加载失败，请重试')),
+            data: (cards) {
+              if (cards.isEmpty) {
+                return Center(
+                  child: Text(
                     '还没有卡片，点击右下角添加',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                ],
-              ),
-            );
-          }
-          return ReorderableListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            itemCount: cards.length,
-            onReorderItem: (oldIndex, newIndex) => ref
-                .read(cardsProvider(category.id).notifier)
-                .reorder(oldIndex, newIndex),
-            itemBuilder: (context, index) => CardTile(
-              key: ValueKey(cards[index].id),
-              card: cards[index],
-              categoryColor: CategoryColors.forId(category.id),
-              onTap: () => context.push(
-                '/wallet/card/${cards[index].id}',
-                extra: cards[index],
-              ),
-            ),
-          );
-        },
+                );
+              }
+              return ReorderableListView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                itemCount: cards.length,
+                onReorderItem: (oldIndex, newIndex) => ref
+                    .read(cardsProvider(category.id).notifier)
+                    .reorder(oldIndex, newIndex),
+                itemBuilder: (context, index) => CardTile(
+                  key: ValueKey(cards[index].id),
+                  card: cards[index],
+                  categoryColor: CategoryColors.forId(category.id),
+                  onTap: () => context.push(
+                    '/wallet/card/${cards[index].id}',
+                    extra: cards[index],
+                  ),
+                ),
+              );
+            },
+          ),
+          DraggableFab(
+            key: ValueKey('add-card-${category.id}'),
+            tooltip: '添加卡片',
+            onPressed: () async {
+              final draft = await ref
+                  .read(cardsProvider(category.id).notifier)
+                  .createDraft(category.cardType);
+              if (!context.mounted) {
+                return;
+              }
+              await context.push<CardRecord?>(
+                '/wallet/card/edit',
+                extra: (card: draft, isNew: true),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -103,58 +94,48 @@ class _DocumentListView extends ConsumerWidget {
     final docsAsync = ref.watch(documentsProvider(category.id));
     return Scaffold(
       appBar: AppBar(title: Text(category.name)),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'add-doc-${category.id}',
-        onPressed: () async {
-          final draft = await ref
-              .read(documentsProvider(category.id).notifier)
-              .createDraft();
-          if (!context.mounted) {
-            return;
-          }
-          await context.push(
-            '/wallet/document/edit',
-            extra: (document: draft, isNew: true),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('添加证件'),
-      ),
-      body: docsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const Center(child: Text('加载失败，请重试')),
-        data: (docs) {
-          if (docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.badge_outlined,
-                    size: 72,
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
+      body: Stack(
+        children: [
+          docsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) => const Center(child: Text('加载失败，请重试')),
+            data: (docs) {
+              if (docs.isEmpty) {
+                return Center(
+                  child: Text(
                     '还没有证件，点击右下角添加',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                ],
-              ),
-            );
-          }
-          return ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-            itemCount: docs.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
-            itemBuilder: (context, index) => _DocTile(
-              document: docs[index],
-              categoryColor: CategoryColors.forId(category.id),
-            ),
-          );
-        },
+                );
+              }
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                itemCount: docs.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (context, index) => _DocTile(
+                  document: docs[index],
+                  categoryColor: CategoryColors.forId(category.id),
+                ),
+              );
+            },
+          ),
+          DraggableFab(
+            key: ValueKey('add-doc-${category.id}'),
+            tooltip: '添加证件',
+            onPressed: () async {
+              final draft = await ref
+                  .read(documentsProvider(category.id).notifier)
+                  .createDraft();
+              if (!context.mounted) {
+                return;
+              }
+              await context.push(
+                '/wallet/document/edit',
+                extra: (document: draft, isNew: true),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -168,9 +149,11 @@ class _DocTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tileKey = GlobalKey();
     final masked = CardNumberValidation.maskForList(document.idNumber);
     final validity = document.validityLabel;
     return Material(
+      key: tileKey,
       color: categoryColor.withValues(alpha: 0.35),
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
@@ -198,6 +181,7 @@ class _DocTile extends ConsumerWidget {
               context,
               ref,
               document.idNumber,
+              feedbackContext: tileKey.currentContext,
             ),
           ),
         ),
