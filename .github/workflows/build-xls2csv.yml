@@ -1,0 +1,61 @@
+name: Build xls2csv GUI
+
+on:
+  push:
+    branches: [ "xls2csv-gui" ]
+    tags: [ "v*" ]        # 推送 v 开头的标签时触发发布
+    paths: [ "XlsToCsvGui/**", ".github/workflows/build-xls2csv.yml" ]
+  workflow_dispatch:       # 也允许在 GitHub Actions 页面手动触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - { arch: amd64, rid: win-x64 }
+          - { arch: "386", rid: win-x86 }
+    defaults:
+      run:
+        working-directory: XlsToCsvGui
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Generate manifest + icon resource
+        run: >
+          go run github.com/akavel/rsrc@latest
+          -manifest app.manifest -ico app.ico -arch ${{ matrix.arch }}
+          -o rsrc_windows_${{ matrix.arch }}.syso
+
+      - name: Build ${{ matrix.rid }}
+        env:
+          GOARCH: ${{ matrix.arch }}
+        run: >
+          go build -trimpath -ldflags "-s -w -H windowsgui"
+          -o xls2csv-gui-${{ matrix.rid }}.exe .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xls2csv-gui-${{ matrix.rid }}
+          path: XlsToCsvGui/xls2csv-gui-${{ matrix.rid }}.exe
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: dist
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
