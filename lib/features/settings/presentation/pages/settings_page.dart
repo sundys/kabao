@@ -201,17 +201,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           '所有卡片、分类、通知与主密码都将被永久删除，'
           '此操作无法撤销。建议先导出备份。\n\n确定继续吗？',
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(dialogContext).colorScheme.error,
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('继续'),
+          _WipeConfirmationActions(
+            dialogContext: dialogContext,
+            confirmLabel: '继续',
           ),
         ],
       ),
@@ -224,17 +218,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('再次确认'),
         content: const Text('真的要删除全部数据吗？删除后将回到首次设置。'),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(dialogContext).colorScheme.error,
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('全部删除'),
+          _WipeConfirmationActions(
+            dialogContext: dialogContext,
+            confirmLabel: '全部删除',
           ),
         ],
       ),
@@ -384,6 +372,53 @@ class _SettingsDivider extends StatelessWidget {
       endIndent: 16,
       color: theme.colorScheme.onSurface.withValues(alpha: alpha),
       thickness: 1,
+    );
+  }
+}
+
+/// Equal-width, separated actions for the destructive confirmation dialogs.
+class _WipeConfirmationActions extends StatelessWidget {
+  const _WipeConfirmationActions({
+    required this.dialogContext,
+    required this.confirmLabel,
+  });
+
+  final BuildContext dialogContext;
+  final String confirmLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(dialogContext).colorScheme;
+    final cancelBorder = Color.alphaBlend(
+      Colors.white.withValues(alpha: .65),
+      scheme.primary,
+    );
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
+              side: BorderSide(color: cancelBorder, width: 1.5),
+              minimumSize: const Size.fromHeight(48),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.error,
+              minimumSize: const Size.fromHeight(48),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(confirmLabel),
+          ),
+        ),
+      ],
     );
   }
 }
