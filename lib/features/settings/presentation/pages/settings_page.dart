@@ -265,7 +265,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             subtitle: Text(_themeLabel(ref)),
             onTap: () => _pickTheme(context, ref),
           ),
-          const Divider(indent: 16, endIndent: 16),
+          const _SettingsDivider(),
           const _SectionHeader(title: '安全'),
           ListTile(
             leading: const Icon(Icons.password_outlined),
@@ -296,7 +296,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               await LocalNotificationService.instance.openSettings();
             },
           ),
-          const Divider(indent: 16, endIndent: 16),
+          const _SettingsDivider(),
           const _SectionHeader(title: '数据'),
           ListTile(
             leading: const Icon(Icons.file_download_outlined),
@@ -338,7 +338,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             subtitle: const Text('删除所有卡片、通知与密钥，不可恢复'),
             onTap: _wipeAllData,
           ),
-          const Divider(indent: 16, endIndent: 16),
+          const _SettingsDivider(),
           const _SectionHeader(title: '关于'),
           ListTile(
             leading: const Icon(Icons.info_outline),
@@ -366,6 +366,24 @@ class _SectionHeader extends StatelessWidget {
           color: Theme.of(context).colorScheme.primary,
         ),
       ),
+    );
+  }
+}
+
+/// A low-contrast divider that remains visible without looking like a bright
+/// white rule in either light or dark mode.
+class _SettingsDivider extends StatelessWidget {
+  const _SettingsDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final alpha = theme.brightness == Brightness.dark ? 0.18 : 0.10;
+    return Divider(
+      indent: 16,
+      endIndent: 16,
+      color: theme.colorScheme.onSurface.withValues(alpha: alpha),
+      thickness: 1,
     );
   }
 }
