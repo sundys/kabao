@@ -131,7 +131,7 @@ git tag v1.0.1
 git push origin v1.0.1
 ```
 
-Release 工作流会按 **arm64-v8a / armeabi-v7a / x86_64** 三种架构分别构建签名 APK，并附带通用 AAB。
+Release 工作流会按 **arm64-v8a / armeabi-v7a** 两种 Android 架构分别构建签名 APK，并附带通用 AAB。
 
 ### 需要配置的 GitHub Secrets
 
@@ -211,7 +211,7 @@ docs/backup-format.md  # 备份格式规范
 flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols
 ```
 
-实测体积：arm64 ≈ 19 MB、armv7 ≈ 16 MB、x86_64 ≈ 21 MB（未优化前合包 52 MB）。
+实测体积：arm64 ≈ 19 MB、armv7 ≈ 16 MB（未优化前合包 52 MB）。
 `build/symbols` 中的符号文件请妥善保存，用于还原混淆后的崩溃堆栈。
 
 ## 已知问题

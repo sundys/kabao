@@ -61,38 +61,47 @@ class _WalletPageState extends State<WalletPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(52),
-        child: Material(
-          color: theme.colorScheme.surface,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 51,
-                child: _CenteredTabHeader(
-                  labels: _tabLabels,
-                  selectedIndex: _currentIndex,
-                  onSelected: _selectTab,
-                ),
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: Column(
+          children: [
+            Material(
+              color: theme.colorScheme.surface,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    height: 51,
+                    child: _CenteredTabHeader(
+                      labels: _tabLabels,
+                      selectedIndex: _currentIndex,
+                      onSelected: _selectTab,
+                    ),
+                  ),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: .45,
+                    ),
+                  ),
+                ],
               ),
-              Divider(
-                height: 1,
-                thickness: 1,
-                color: theme.colorScheme.outlineVariant.withValues(alpha: .45),
+            ),
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _pageCount,
+                onPageChanged: _onPageChanged,
+                itemBuilder: (context, page) {
+                  final type = _tabTypes[_logicalIndex(page)];
+                  return CategoryListView(key: ValueKey(type), cardType: type);
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: _pageCount,
-        onPageChanged: _onPageChanged,
-        itemBuilder: (context, page) {
-          final type = _tabTypes[_logicalIndex(page)];
-          return CategoryListView(key: ValueKey(type), cardType: type);
-        },
       ),
     );
   }

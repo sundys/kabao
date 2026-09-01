@@ -56,15 +56,12 @@ jobs:
       - name: Build signed AAB
         run: flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
 
-      # 按 CPU 架构分别构建 APK：armv8 / armv7 / x86-64。
+      # 按 CPU 架构分别构建 APK：armv8 / armv7。
       - name: Build signed APK (arm64-v8a)
         run: flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols --target-platform android-arm64
 
       - name: Build signed APK (armeabi-v7a)
         run: flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols --target-platform android-arm
-
-      - name: Build signed APK (x86_64)
-        run: flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols --target-platform android-x64
 
       - name: Upload debug symbols
         uses: actions/upload-artifact@v4
@@ -89,8 +86,6 @@ jobs:
              dist/kabao-${{ steps.version.outputs.VERSION }}-arm64-v8a.apk
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk \
              dist/kabao-${{ steps.version.outputs.VERSION }}-armeabi-v7a.apk
-          cp build/app/outputs/flutter-apk/app-x86_64-release.apk \
-             dist/kabao-${{ steps.version.outputs.VERSION }}-x86_64.apk
           cp build/app/outputs/bundle/release/app-release.aab \
              dist/kabao-${{ steps.version.outputs.VERSION }}.aab
 
@@ -123,6 +118,5 @@ jobs:
           files: |
             dist/kabao-*-arm64-v8a.apk
             dist/kabao-*-armeabi-v7a.apk
-            dist/kabao-*-x86_64.apk
             dist/kabao-*.aab
           generate_release_notes: true
