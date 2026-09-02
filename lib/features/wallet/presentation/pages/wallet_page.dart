@@ -82,8 +82,8 @@ class _WalletPageState extends State<WalletPage> {
                   Divider(
                     height: 1,
                     thickness: 1,
-                    color: theme.colorScheme.outlineVariant.withValues(
-                      alpha: .45,
+                    color: theme.colorScheme.onSurface.withValues(
+                      alpha: theme.brightness == Brightness.dark ? .18 : .10,
                     ),
                   ),
                 ],
