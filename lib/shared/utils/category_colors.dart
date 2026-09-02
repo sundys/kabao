@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 
-/// Light, distinguishable background colors assigned to bank categories so
-/// each bank reads as a different hue while keeping text readable.
+/// Dark, distinguishable background colors assigned to bank categories so
+/// each bank reads as a different hue without competing with the app theme.
 abstract final class CategoryColors {
   static const List<Color> palette = [
-    Color(0xFFDCEFE3), // mint green
-    Color(0xFFDCE8F7), // soft blue
-    Color(0xFFFFF0D6), // warm sand
-    Color(0xFFFBE3EC), // rose
-    Color(0xFFE6E3FA), // lavender
-    Color(0xFFE0F2EF), // aqua
-    Color(0xFFFFE5D9), // peach
-    Color(0xFFF0EDDA), // olive cream
-    Color(0xFFE2ECF9), // steel blue
-    Color(0xFFF6E3D7), // clay
+    Color(0xFF24534D), // deep mint
+    Color(0xFF294D6B), // deep blue
+    Color(0xFF5A4630), // walnut
+    Color(0xFF5A3D4A), // rosewood
+    Color(0xFF443B63), // indigo
+    Color(0xFF245B5A), // deep aqua
+    Color(0xFF5C4030), // clay
+    Color(0xFF4A4E32), // olive
+    Color(0xFF36536A), // steel blue
+    Color(0xFF51413A), // cocoa
   ];
 
   static Color forId(String id) {
@@ -25,7 +25,9 @@ abstract final class CategoryColors {
   }
 
   static Color foregroundFor(Color background) {
-    // All palette entries are light; use a fixed dark ink tone.
-    return const Color(0xFF1B2B24);
+    // Keep text readable if the palette is extended with lighter colors.
+    return background.computeLuminance() < .45
+        ? const Color(0xFFF4F7F5)
+        : const Color(0xFF17211E);
   }
 }
