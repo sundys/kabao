@@ -11,6 +11,14 @@ final categoriesProvider = AsyncNotifierProvider.autoDispose
       (arg) => CategoriesController()..cardType = arg,
     );
 
+/// Reads the number of records in a category without loading encrypted
+/// card/document payloads into memory.
+final categoryCardCountProvider = FutureProvider.autoDispose
+    .family<int, String>((ref, categoryId) async {
+      final repo = ref.watch(categoryRepositoryProvider);
+      return repo?.countCardsInCategory(categoryId) ?? 0;
+    });
+
 class CategoriesController extends AsyncNotifier<List<BankCategory>> {
   late CardType cardType;
 

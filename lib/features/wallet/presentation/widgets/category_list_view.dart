@@ -156,6 +156,17 @@ class _CategoryTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final background = CategoryColors.forId(category.id);
     final ink = CategoryColors.foregroundFor(background);
+    final cardCount = ref.watch(categoryCardCountProvider(category.id));
+    final typeLabel = switch (cardType) {
+      CardType.debit => '借记卡',
+      CardType.credit => '信用卡',
+      CardType.document => '证件卡',
+    };
+    final countLabel = cardCount.when(
+      data: (count) => '共 $count 张卡片',
+      loading: () => '共 — 张卡片',
+      error: (_, _) => '共 — 张卡片',
+    );
     return Material(
       color: background,
       borderRadius: BorderRadius.circular(16),
@@ -170,6 +181,7 @@ class _CategoryTile extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Icon(
                     switch (cardType) {
@@ -178,34 +190,69 @@ class _CategoryTile extends ConsumerWidget {
                       CardType.document => Icons.badge_outlined,
                     },
                     color: ink,
-                    size: 22,
+                    size: 23,
                   ),
-                  const Spacer(),
-                  Icon(Icons.chevron_right, color: ink.withValues(alpha: 0.6)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      category.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        height: 1.2,
+                        color: ink,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.chevron_right,
+                    color: ink.withValues(alpha: 0.6),
+                    size: 21,
+                  ),
                 ],
               ),
               const Spacer(),
-              Text(
-                category.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: ink,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                switch (cardType) {
-                  CardType.debit => '借记卡',
-                  CardType.credit => '信用卡',
-                  CardType.document => '证件卡',
-                },
-                style: TextStyle(
-                  fontSize: 12,
-                  color: ink.withValues(alpha: .7),
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: Text(
+                      typeLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: ink.withValues(alpha: .72),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Container(
+                      width: 1,
+                      height: 12,
+                      color: ink.withValues(alpha: .25),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      countLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.2,
+                        color: ink.withValues(alpha: .72),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

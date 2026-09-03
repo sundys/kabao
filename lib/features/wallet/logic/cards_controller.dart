@@ -5,6 +5,7 @@ import '../../../../app/providers/repositories_providers.dart';
 import '../../notifications/logic/reminder_coordinator.dart';
 import '../../../shared/services/local_notification_service.dart';
 import '../domain/models.dart';
+import 'categories_controller.dart';
 
 /// Loads and mutates the card records of one category.
 final cardsProvider = AsyncNotifierProvider.autoDispose
@@ -75,6 +76,7 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
         ? card.withSortOrder(previous.sortOrder)
         : card;
     await repo.save(merged);
+    ref.invalidate(categoryCardCountProvider(categoryId));
     // A date edit reuses the same dedupe keys, so discard old snapshots before
     // recomputation can create reminders for the new deadlines.
     await ref.read(notificationRepositoryProvider)?.purgeByCard(card.id);
@@ -106,6 +108,7 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
     final removed = await repo.delete(id);
     if (removed > 0) {
       ref.invalidateSelf();
+      ref.invalidate(categoryCardCountProvider(categoryId));
       // Drop reminders belonging to the deleted card.
       final notifications = ref.read(notificationRepositoryProvider);
       await notifications?.deleteByCard(id);
