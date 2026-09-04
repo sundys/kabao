@@ -5,6 +5,8 @@ import 'package:kabao/core/crypto/aead_cipher.dart';
 import 'package:kabao/core/database/encrypted_database.dart';
 import 'package:kabao/features/wallet/data/card_repository.dart';
 import 'package:kabao/features/wallet/data/category_repository.dart';
+import 'package:kabao/features/wallet/data/document_repository.dart';
+import 'package:kabao/features/wallet/domain/document.dart';
 import 'package:kabao/features/wallet/domain/models.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -110,6 +112,25 @@ void main() {
     await cards.delete('card-2');
     expect(await categories.delete(category.id), 1);
     expect(await categories.getById(category.id), isNull);
+  });
+
+  test('分类数量同时统计证件记录', () async {
+    final category = await seedCategory(CardType.document, '身份证');
+    final now = DateTime.now();
+    final documents = DocumentRepository(db);
+    await documents.save(
+      DocumentRecord(
+        id: 'document-1',
+        categoryId: category.id,
+        holderName: '测试用户',
+        idNumber: 'TEST-DOCUMENT-1',
+        issuer: '测试机关',
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    expect(await categories.countCardsInCategory(category.id), 1);
   });
 
   test('更新卡片不改变创建时间', () async {

@@ -164,8 +164,8 @@ class _CategoryTile extends ConsumerWidget {
     };
     final countLabel = cardCount.when(
       data: (count) => '共 $count 张卡片',
-      loading: () => '共 — 张卡片',
-      error: (_, _) => '共 — 张卡片',
+      loading: () => '共 0 张卡片',
+      error: (_, _) => '共 0 张卡片',
     );
     return Material(
       color: background,
@@ -222,31 +222,28 @@ class _CategoryTile extends ConsumerWidget {
                     child: Text(
                       typeLabel,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.clip,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         height: 1.2,
                         fontWeight: FontWeight.w600,
                         color: ink.withValues(alpha: .72),
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Container(
-                      width: 1,
-                      height: 12,
-                      color: ink.withValues(alpha: .25),
-                    ),
+                  Container(
+                    width: 1,
+                    height: 14,
+                    color: ink.withValues(alpha: .32),
                   ),
                   Expanded(
                     child: Text(
                       countLabel,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.clip,
                       textAlign: TextAlign.right,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 13,
                         height: 1.2,
                         color: ink.withValues(alpha: .72),
                       ),
