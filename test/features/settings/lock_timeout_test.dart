@@ -13,9 +13,10 @@ void main() {
 
   group('LockTimeout', () {
     test('六个档位的时长与文案', () {
-      expect(LockTimeout.values, hasLength(6));
+      expect(LockTimeout.values, hasLength(7));
       expect(LockTimeout.values.map((t) => t.label).toList(), [
         '立即',
+        '15秒',
         '30秒',
         '1分钟',
         '2分钟',
@@ -23,6 +24,7 @@ void main() {
         '10分钟',
       ]);
       expect(LockTimeout.immediate.duration, Duration.zero);
+      expect(LockTimeout.seconds15.duration, const Duration(seconds: 15));
       expect(LockTimeout.seconds30.duration, const Duration(seconds: 30));
       expect(LockTimeout.minutes1.duration, const Duration(minutes: 1));
       expect(LockTimeout.minutes2.duration, const Duration(minutes: 2));
@@ -118,7 +120,7 @@ void main() {
         expect(find.text(label), findsOneWidget);
       }
       expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
-      expect(find.byIcon(Icons.radio_button_unchecked), findsNWidgets(5));
+      expect(find.byIcon(Icons.radio_button_unchecked), findsNWidgets(6));
     });
 
     testWidgets('点击其它档位后立即切换并持久化', (tester) async {

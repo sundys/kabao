@@ -84,6 +84,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         children: [
           for (final timeout in LockTimeout.values)
             ListTile(
+              visualDensity: VisualDensity.compact,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
               leading: Icon(
                 timeout == current
                     ? Icons.radio_button_checked

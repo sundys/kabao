@@ -5,6 +5,7 @@ import '../../auth/logic/auth_controller.dart';
 /// 用户可选的自动锁定超时档位：应用被切到后台后，经过该时长即锁定数据库。
 enum LockTimeout {
   immediate(Duration.zero, '立即'),
+  seconds15(Duration(seconds: 15), '15秒'),
   seconds30(Duration(seconds: 30), '30秒'),
   minutes1(Duration(minutes: 1), '1分钟'),
   minutes2(Duration(minutes: 2), '2分钟'),
