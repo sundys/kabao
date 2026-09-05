@@ -24,23 +24,35 @@ Future<List<AppNotification>> recomputeReminders({
 }) async {
   final at = now ?? DateTime.now();
   final systemNotifications = localNotifications;
-  final existing = knownDedupeKeys ?? await notifications.existingDedupeKeys();
+  final notificationCache = <String, AppNotification>{
+    for (final notification in await notifications.listAll())
+      notification.dedupeKey: notification,
+  };
+  final existing = knownDedupeKeys ?? notificationCache.keys.toList();
   final deleted = systemNotifications == null
       ? const <String>[]
       : await notifications.deletedDedupeKeys();
   final existingSet = Set<String>.from(existing);
   final deletedSet = Set<String>.from(deleted);
   final created = <AppNotification>[];
+  final categoryCache = <String, BankCategory?>{};
+
+  Future<BankCategory?> categoryFor(String categoryId) async {
+    if (categories == null) {
+      return null;
+    }
+    if (!categoryCache.containsKey(categoryId)) {
+      categoryCache[categoryId] = await categories.getById(categoryId);
+    }
+    return categoryCache[categoryId];
+  }
 
   for (final type in CardType.values) {
     if (type == CardType.document) {
       continue; // handled by the document pass below
     }
     for (final card in await cards.listByType(type)) {
-      BankCategory? category;
-      if (categories != null) {
-        category = await categories.getById(card.categoryId);
-      }
+      final category = await categoryFor(card.categoryId);
       for (final plan in plansForCard(
         card,
         at,
@@ -48,9 +60,7 @@ Future<List<AppNotification>> recomputeReminders({
       )) {
         if (existingSet.contains(plan.dedupeKey)) {
           if (!deletedSet.contains(plan.dedupeKey)) {
-            final existingNotification = await notifications.findByDedupeKey(
-              plan.dedupeKey,
-            );
+            final existingNotification = notificationCache[plan.dedupeKey];
             final notification = buildNotification(
               id: existingNotification?.id ?? 'system-${plan.dedupeKey}',
               plan: plan,
@@ -116,10 +126,7 @@ Future<List<AppNotification>> recomputeReminders({
       ? const <DocumentRecord>[]
       : await documents.listAll();
   for (final doc in docs) {
-    BankCategory? category;
-    if (categories != null) {
-      category = await categories.getById(doc.categoryId);
-    }
+    final category = await categoryFor(doc.categoryId);
     for (final plan in plansForDocument(
       doc.id,
       doc.validTo,
@@ -128,9 +135,7 @@ Future<List<AppNotification>> recomputeReminders({
     )) {
       if (existingSet.contains(plan.dedupeKey)) {
         if (!deletedSet.contains(plan.dedupeKey)) {
-          final existingNotification = await notifications.findByDedupeKey(
-            plan.dedupeKey,
-          );
+          final existingNotification = notificationCache[plan.dedupeKey];
           final notification = buildDocumentNotification(
             id: existingNotification?.id ?? 'system-${plan.dedupeKey}',
             plan: plan,

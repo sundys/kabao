@@ -1,19 +1,21 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models.dart';
 import '../widgets/category_list_view.dart';
+import '../widgets/wallet_search_sheet.dart';
 
 /// Wallet screen with a centered, swipeable three-tab selector.
-class WalletPage extends StatefulWidget {
+class WalletPage extends ConsumerStatefulWidget {
   const WalletPage({super.key});
 
   @override
-  State<WalletPage> createState() => _WalletPageState();
+  ConsumerState<WalletPage> createState() => _WalletPageState();
 }
 
-class _WalletPageState extends State<WalletPage> {
+class _WalletPageState extends ConsumerState<WalletPage> {
   static const _tabLabels = ['借记卡', '信用卡', '证件卡'];
   static const _tabTypes = [CardType.debit, CardType.credit, CardType.document];
   static const _pageCount = 1000000;
@@ -64,40 +66,92 @@ class _WalletPageState extends State<WalletPage> {
       body: SafeArea(
         top: true,
         bottom: false,
-        child: Column(
+        child: Stack(
           children: [
-            Material(
-              color: theme.colorScheme.surface,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 51,
-                    child: _CenteredTabHeader(
-                      labels: _tabLabels,
-                      selectedIndex: _currentIndex,
-                      onSelected: _selectTab,
-                    ),
+            Column(
+              children: [
+                Material(
+                  color: theme.colorScheme.surface,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        height: 51,
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 48),
+                            Expanded(
+                              child: _CenteredTabHeader(
+                                labels: _tabLabels,
+                                selectedIndex: _currentIndex,
+                                onSelected: _selectTab,
+                              ),
+                            ),
+                            IconButton(
+                              key: const Key('add-category-button'),
+                              tooltip: '新建分类',
+                              onPressed: () =>
+                                  CategoryListView.showCreateDialog(
+                                    context,
+                                    ref,
+                                    _tabTypes[_currentIndex],
+                                  ),
+                              icon: const Icon(Icons.add),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: theme.brightness == Brightness.dark
+                              ? .18
+                              : .10,
+                        ),
+                      ),
+                    ],
                   ),
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: theme.colorScheme.onSurface.withValues(
-                      alpha: theme.brightness == Brightness.dark ? .18 : .10,
-                    ),
+                ),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: _pageCount,
+                    onPageChanged: _onPageChanged,
+                    itemBuilder: (context, page) {
+                      final type = _tabTypes[_logicalIndex(page)];
+                      return CategoryListView(
+                        key: ValueKey(type),
+                        cardType: type,
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _pageCount,
-                onPageChanged: _onPageChanged,
-                itemBuilder: (context, page) {
-                  final type = _tabTypes[_logicalIndex(page)];
-                  return CategoryListView(key: ValueKey(type), cardType: type);
-                },
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 14, bottom: 18),
+                child: GestureDetector(
+                  key: const Key('wallet-search-button'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => showModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    useSafeArea: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                    ),
+                    builder: (_) => const WalletSearchSheet(),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.search, size: 30),
+                  ),
+                ),
               ),
             ),
           ],

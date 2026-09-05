@@ -17,7 +17,11 @@ final class CardRepository {
       (metadata['card_type'] as String?) != 'document';
 
   Future<List<CardRecord>> listByCategory(String categoryId) async {
-    final records = await _db.listRecords(table);
+    final records = await _db.listRecords(
+      table,
+      where: 'category_id = ? AND card_type != ?',
+      whereArgs: [categoryId, 'document'],
+    );
     final cards = <CardRecord>[];
     for (final record in records) {
       if (!_isBankCard(record.metadata.extra)) {
@@ -37,7 +41,11 @@ final class CardRepository {
 
   Future<List<CardRecord>> listByType(CardType type) async {
     assert(type != CardType.document, 'documents use DocumentRepository');
-    final records = await _db.listRecords(table);
+    final records = await _db.listRecords(
+      table,
+      where: 'card_type = ?',
+      whereArgs: [cardTypeToWire(type)],
+    );
     return records
         .where((record) => _isBankCard(record.metadata.extra))
         .map(
@@ -51,7 +59,11 @@ final class CardRepository {
   }
 
   Future<CardRecord?> getById(String id) async {
-    final records = await _db.listRecords(table);
+    final records = await _db.listRecords(
+      table,
+      where: 'id = ? AND card_type != ?',
+      whereArgs: [id, 'document'],
+    );
     for (final record in records) {
       if (record.metadata.id == id && _isBankCard(record.metadata.extra)) {
         return CardRecord.fromJsonFields(

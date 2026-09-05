@@ -50,7 +50,8 @@ class LockTimeoutController extends AsyncNotifier<LockTimeout> {
   }
 
   Future<void> setTimeout(LockTimeout timeout) async {
-    await ref.read(secureStoreProvider).write(_key, timeout.name);
+    // Make the selected row/button responsive; persistence follows.
     state = AsyncData(timeout);
+    await ref.read(secureStoreProvider).write(_key, timeout.name);
   }
 }

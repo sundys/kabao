@@ -57,6 +57,13 @@ final class NotificationRepository {
     return rows.isEmpty ? null : AppNotification.fromRow(rows.first);
   }
 
+  /// Decrypts all reminder snapshots once for bulk recomputation; this avoids
+  /// repeated per-key queries while still including dismissed rows.
+  Future<List<AppNotification>> listAll() async {
+    final rows = await _db.queryWhere(table);
+    return rows.map(AppNotification.fromRow).toList();
+  }
+
   Future<int> markSystemScheduled(String id) => _db.updateWhere(
     table,
     {'system_scheduled_at': DateTime.now().millisecondsSinceEpoch},

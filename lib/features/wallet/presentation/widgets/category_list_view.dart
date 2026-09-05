@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../shared/utils/category_colors.dart';
 import '../../../../shared/validation/validators.dart';
-import '../../../../shared/widgets/draggable_fab.dart';
 import '../../domain/models.dart';
 import '../../logic/categories_controller.dart';
 
@@ -13,7 +12,11 @@ class CategoryListView extends ConsumerWidget {
 
   final CardType cardType;
 
-  Future<void> _showCreateDialog(BuildContext context, WidgetRef ref) async {
+  static Future<void> showCreateDialog(
+    BuildContext context,
+    WidgetRef ref,
+    CardType cardType,
+  ) async {
     final controller = TextEditingController();
     final formKey = GlobalKey<FormState>();
     final name = await showDialog<String>(
@@ -32,9 +35,15 @@ class CategoryListView extends ConsumerWidget {
             autofocus: true,
             maxLength: 10,
             validator: Validators.categoryName,
-            decoration: const InputDecoration(
-              labelText: '银行分类名称',
-              hintText: '如：工商银行',
+            decoration: InputDecoration(
+              labelText: switch (cardType) {
+                CardType.debit || CardType.credit => '银行分类名称',
+                CardType.document => '证件分类名称',
+              },
+              hintText: switch (cardType) {
+                CardType.debit || CardType.credit => '如：工商银行',
+                CardType.document => '如：身份证',
+              },
             ),
           ),
         ),
@@ -83,7 +92,7 @@ class CategoryListView extends ConsumerWidget {
                     crossAxisCount: 2,
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
-                    childAspectRatio: 1.45,
+                    childAspectRatio: 1.85,
                   ),
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
@@ -96,11 +105,6 @@ class CategoryListView extends ConsumerWidget {
                 ),
               );
             },
-          ),
-          DraggableFab(
-            key: ValueKey('create-category-${cardType.name}'),
-            tooltip: '新建分类',
-            onPressed: () => _showCreateDialog(context, ref),
           ),
         ],
       ),
@@ -176,7 +180,7 @@ class _CategoryTile extends ConsumerWidget {
             context.push('/wallet/category/${category.id}', extra: category),
         onLongPress: () => _confirmDelete(context, ref),
         child: Padding(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -206,11 +210,10 @@ class _CategoryTile extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
                   Icon(
-                    Icons.chevron_right,
-                    color: ink.withValues(alpha: 0.6),
-                    size: 21,
+                    Icons.more_vert,
+                    color: ink.withValues(alpha: 0.62),
+                    size: 22,
                   ),
                 ],
               ),
@@ -293,7 +296,10 @@ class _EmptyPlaceholder extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '点击右下角按钮创建银行分类',
+            switch (cardType) {
+              CardType.debit || CardType.credit => '点击右上角按键创建银行分类',
+              CardType.document => '点击右上角创建证件卡分类',
+            },
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.outline,
             ),

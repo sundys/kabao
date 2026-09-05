@@ -67,7 +67,7 @@ final class MasterKeyManager {
       final salt = _aead.generateKey(16);
       final dek = _aead.generateKey(32);
       final params = KdfParams.mobileDefault;
-      final kek = _kdf.deriveKey(password, salt, params);
+      final kek = await _kdf.deriveKeyAsync(password, salt, params);
       final wrapped = await _aead.encrypt(kek, dek);
       await storage.write(_kSalt, base64Encode(salt));
       await storage.write(_kKdfParams, jsonEncode(params.toJson()));
@@ -84,7 +84,7 @@ final class MasterKeyManager {
       return const MasterKeyFailure(MasterKeyError.notInitialized);
     }
     final (salt, params, wrapped) = stored;
-    final kek = _kdf.deriveKey(password, salt, params);
+    final kek = await _kdf.deriveKeyAsync(password, salt, params);
     try {
       final dek = await _aead.decrypt(kek, wrapped);
       return MasterKeySuccess(dek);
@@ -122,7 +122,7 @@ final class MasterKeyManager {
     try {
       final newSalt = _aead.generateKey(16);
       final params = KdfParams.mobileDefault;
-      final newKek = _kdf.deriveKey(newPassword, newSalt, params);
+      final newKek = await _kdf.deriveKeyAsync(newPassword, newSalt, params);
       final newWrapped = await _aead.encrypt(newKek, dek);
       await storage.write(_kSalt, base64Encode(newSalt));
       await storage.write(_kKdfParams, jsonEncode(params.toJson()));

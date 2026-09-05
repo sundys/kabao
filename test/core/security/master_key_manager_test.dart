@@ -127,4 +127,11 @@ final class _FastKdf implements KdfService {
   @override
   Uint8List deriveKey(String password, Uint8List salt, KdfParams params) =>
       KdfService().deriveKey(password, salt, _fastKdf);
+
+  @override
+  Future<Uint8List> deriveKeyAsync(
+    String password,
+    Uint8List salt,
+    KdfParams params,
+  ) async => deriveKey(password, salt, params);
 }

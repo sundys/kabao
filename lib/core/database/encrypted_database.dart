@@ -175,9 +175,13 @@ final class EncryptedDatabase {
     return _aead.decrypt(key, Uint8List.fromList(stored));
   }
 
-  Future<List<EncryptedRecord>> listRecords(String table) async {
+  Future<List<EncryptedRecord>> listRecords(
+    String table, {
+    String? where,
+    List<Object?>? whereArgs,
+  }) async {
     final key = await _requireKey();
-    final rows = await _exec.query(table);
+    final rows = await _exec.query(table, where: where, whereArgs: whereArgs);
     final records = <EncryptedRecord>[];
     for (final row in rows) {
       final payload = Uint8List.fromList(row['payload']! as List<int>);

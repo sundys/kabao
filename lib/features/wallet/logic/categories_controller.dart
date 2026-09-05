@@ -38,17 +38,16 @@ class CategoriesController extends AsyncNotifier<List<BankCategory>> {
     }
     final existing = state.value ?? const <BankCategory>[];
     final now = DateTime.now();
-    await repo.save(
-      BankCategory(
-        id: const Uuid().v4(),
-        cardType: cardType,
-        name: name.trim(),
-        sortOrder: existing.length,
-        createdAt: now,
-        updatedAt: now,
-      ),
+    final category = BankCategory(
+      id: const Uuid().v4(),
+      cardType: cardType,
+      name: name.trim(),
+      sortOrder: existing.length,
+      createdAt: now,
+      updatedAt: now,
     );
-    ref.invalidateSelf();
+    await repo.save(category);
+    state = AsyncData([...existing, category]);
     return true;
   }
 
@@ -61,10 +60,15 @@ class CategoriesController extends AsyncNotifier<List<BankCategory>> {
     if (current == null) {
       return false;
     }
-    await repo.save(
-      current.copyWith(name: name.trim(), updatedAt: DateTime.now()),
+    final updated = current.copyWith(
+      name: name.trim(),
+      updatedAt: DateTime.now(),
     );
-    ref.invalidateSelf();
+    await repo.save(updated);
+    state = AsyncData([
+      for (final category in state.value ?? const <BankCategory>[])
+        if (category.id == id) updated else category,
+    ]);
     return true;
   }
 
@@ -80,7 +84,10 @@ class CategoriesController extends AsyncNotifier<List<BankCategory>> {
       return false;
     }
     await repo.delete(id);
-    ref.invalidateSelf();
+    state = AsyncData([
+      for (final category in state.value ?? const <BankCategory>[])
+        if (category.id != id) category,
+    ]);
     return true;
   }
 

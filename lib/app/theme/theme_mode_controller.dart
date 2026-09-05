@@ -23,7 +23,8 @@ class ThemeModeController extends AsyncNotifier<ThemeMode> {
   }
 
   Future<void> setMode(ThemeMode mode) async {
-    await ref.read(secureStoreProvider).write(_key, mode.name);
+    // Update first so the MaterialApp does not wait on secure-storage I/O.
     state = AsyncData(mode);
+    await ref.read(secureStoreProvider).write(_key, mode.name);
   }
 }

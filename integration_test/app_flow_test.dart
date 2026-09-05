@@ -38,7 +38,7 @@ void main() {
     expect(find.text('借记卡'), findsOneWidget);
 
     // ---- 创建银行分类（名称校验：仅中文 ≤4 字）----
-    await tester.tap(find.text('新建分类'));
+    await tester.tap(find.byKey(const Key('add-category-button')));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('category-name-field')),

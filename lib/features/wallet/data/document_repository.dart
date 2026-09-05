@@ -11,7 +11,11 @@ final class DocumentRepository {
   final EncryptedDatabase _db;
 
   Future<List<DocumentRecord>> listByCategory(String categoryId) async {
-    final records = await _db.listRecords(table);
+    final records = await _db.listRecords(
+      table,
+      where: 'card_type = ? AND category_id = ?',
+      whereArgs: ['document', categoryId],
+    );
     return records
         .map((record) => _tryParse(record.metadata.extra, record.json))
         .whereType<DocumentRecord>()
@@ -21,7 +25,11 @@ final class DocumentRepository {
   }
 
   Future<List<DocumentRecord>> listAll() async {
-    final records = await _db.listRecords(table);
+    final records = await _db.listRecords(
+      table,
+      where: 'card_type = ?',
+      whereArgs: ['document'],
+    );
     return records
         .map((record) => _tryParse(record.metadata.extra, record.json))
         .whereType<DocumentRecord>()
@@ -29,10 +37,13 @@ final class DocumentRepository {
   }
 
   Future<DocumentRecord?> getById(String id) async {
-    for (final doc in await listAll()) {
-      if (doc.id == id) {
-        return doc;
-      }
+    final records = await _db.listRecords(
+      table,
+      where: 'id = ? AND card_type = ?',
+      whereArgs: [id, 'document'],
+    );
+    for (final record in records) {
+      return _tryParse(record.metadata.extra, record.json);
     }
     return null;
   }

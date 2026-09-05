@@ -73,7 +73,7 @@ abstract final class BackupCodec {
     final deriver = kdf ?? KdfService();
 
     final salt = cipher.generateKey(16);
-    final kek = deriver.deriveKey(password, salt, kdfParams);
+    final kek = await deriver.deriveKeyAsync(password, salt, kdfParams);
     final plaintext = Uint8List.fromList(
       utf8.encode(jsonEncode(_snapshotToJson(snapshot))),
     );
@@ -118,7 +118,11 @@ abstract final class BackupCodec {
     final envelope = _parseEnvelope(contents);
 
     final salt = base64Decode(envelope.saltBase64);
-    final kek = deriver.deriveKey(password, salt, envelope.kdfParams);
+    final kek = await deriver.deriveKeyAsync(
+      password,
+      salt,
+      envelope.kdfParams,
+    );
     final Uint8List data;
     try {
       data = Uint8List.fromList(base64Decode(envelope.dataBase64));

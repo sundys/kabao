@@ -28,7 +28,11 @@ final class CategoryRepository {
   }
 
   Future<List<BankCategory>> listByType(CardType type) async {
-    final records = await _db.listRecords(table);
+    final records = await _db.listRecords(
+      table,
+      where: 'card_type = ?',
+      whereArgs: [cardTypeToWire(type)],
+    );
     final categories = <BankCategory>[];
     for (final record in records) {
       final category = BankCategory.fromJsonFields(

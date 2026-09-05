@@ -20,7 +20,8 @@ final class VaultDatabaseController extends AsyncNotifier<EncryptedDatabase?> {
     final auth = await ref.watch(authControllerProvider.future);
     switch (auth) {
       case AuthUnlocked(:final dataKey):
-        final db = await EncryptedDatabase.open(await databasePath());
+        final path = await databasePath();
+        final db = await EncryptedDatabase.open(path);
         db.attachKey(dataKey);
         ref.onDispose(() {
           db.detachKey();

@@ -36,7 +36,7 @@ void main() {
     // ---- 切到证件卡标签并创建分类 ----
     await tester.tap(find.text('证件卡'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('新建分类'));
+    await tester.tap(find.byKey(const Key('add-category-button')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('category-name-field')), '身份证');
     await tester.tap(find.text('创建'));
