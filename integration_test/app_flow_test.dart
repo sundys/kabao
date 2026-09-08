@@ -68,5 +68,30 @@ void main() {
 
     // 卡片列表显示脱敏分组卡号
     expect(find.text('6222 **** **** 5678'), findsOneWidget);
+
+    // 点击列表条目必须进入卡片详情/编辑查看状态。
+    await tester.tap(find.text('6222 **** **** 5678'));
+    await tester.pumpAndSettle();
+    expect(find.text('卡片详情'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    // 单独复制图标不能被详情路由或列表手势遮挡。
+    await tester.tap(find.byIcon(Icons.copy_outlined));
+    await tester.pump();
+    expect(find.text('已复制'), findsOneWidget);
+
+    // 搜索结果也必须能进入同一详情页。
+    await tester.tap(find.byKey(const Key('wallet-search-button')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('wallet-search-field')),
+      '6222',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('6222 **** **** 5678'));
+    await tester.pumpAndSettle();
+    expect(find.text('卡片详情'), findsOneWidget);
   });
 }

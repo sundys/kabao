@@ -47,6 +47,9 @@ class CategoryDetailPage extends ConsumerWidget {
               return ReorderableListView.builder(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                 itemCount: cards.length,
+                // 默认把手会包裹整行并参与手势竞技，某些设备上会吞掉点击。
+                // 改为只在右侧专用拖动把手上启用拖动。
+                buildDefaultDragHandles: false,
                 onReorderItem: (oldIndex, newIndex) => ref
                     .read(cardsProvider(category.id).notifier)
                     .reorder(oldIndex, newIndex),
@@ -54,6 +57,7 @@ class CategoryDetailPage extends ConsumerWidget {
                   key: ValueKey(cards[index].id),
                   card: cards[index],
                   categoryColor: CategoryColors.forId(category.id),
+                  dragIndex: index,
                   onTap: () => context.push(
                     '/wallet/card/${cards[index].id}',
                     extra: cards[index],

@@ -38,6 +38,34 @@ void main() {
     expect(find.textContaining('有效期 02/27 工商银行工资…'), findsOneWidget);
   });
 
+  testWidgets('ReorderableListView 中的卡片点击仍触发详情回调', (tester) async {
+    var tapped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ReorderableListView.builder(
+            itemCount: 1,
+            onReorderItem: (_, _) {},
+            itemBuilder: (context, index) => Padding(
+              key: ValueKey(index),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: CardTile(
+                card: _card(),
+                categoryColor: const Color(0xFFDCEFE3),
+                onTap: () => tapped = true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('张三'));
+    await tester.pump();
+
+    expect(tapped, isTrue);
+  });
+
   group('buildSubtitle 拼接规则', () {
     final masked = CardNumberValidation.maskForList('6222365623223699');
 

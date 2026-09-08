@@ -12,11 +12,15 @@ class CardTile extends ConsumerWidget {
     super.key,
     required this.card,
     required this.categoryColor,
+    this.dragIndex,
     this.onTap,
   });
 
   final CardRecord card;
   final Color categoryColor;
+
+  /// ReorderableListView 的拖动索引；设置后用左侧卡片图标作为拖动把手。
+  final int? dragIndex;
 
   /// 点击卡片（进入详情页），由调用方注入。
   final VoidCallback? onTap;
@@ -49,7 +53,15 @@ class CardTile extends ConsumerWidget {
               horizontal: 20,
               vertical: 8,
             ),
-            leading: const Icon(Icons.credit_card),
+            leading: dragIndex == null
+                ? const Icon(Icons.credit_card)
+                : Tooltip(
+                    message: '拖动排序',
+                    child: ReorderableDragStartListener(
+                      index: dragIndex!,
+                      child: const Icon(Icons.credit_card),
+                    ),
+                  ),
             title: Text(
               hasName ? card.holderName! : masked,
               style: const TextStyle(fontWeight: FontWeight.w600),
@@ -63,15 +75,20 @@ class CardTile extends ConsumerWidget {
                 remarkShort: remarkShort,
               ),
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.copy_outlined),
-              tooltip: '复制卡号',
-              onPressed: () => ClipboardService.copyCardNumber(
-                context,
-                ref,
-                card.cardNumber,
-                feedbackContext: tileKey.currentContext,
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.copy_outlined),
+                  tooltip: '复制卡号',
+                  onPressed: () => ClipboardService.copyCardNumber(
+                    context,
+                    ref,
+                    card.cardNumber,
+                    feedbackContext: tileKey.currentContext,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
