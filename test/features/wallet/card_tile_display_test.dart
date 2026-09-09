@@ -66,6 +66,29 @@ void main() {
     expect(tapped, isTrue);
   });
 
+  testWidgets('姓名和备注只有不可见字符时显示脱敏卡号', (tester) async {
+    final now = DateTime.now();
+    final card = CardRecord(
+      id: 'card-1',
+      categoryId: 'cat',
+      cardType: CardType.debit,
+      holderName: '\u200B',
+      cardNumber: '6222365623223699',
+      note: '\uFEFF',
+      createdAt: now,
+      updatedAt: now,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardTile(card: card, categoryColor: const Color(0xFFDCEFE3)),
+        ),
+      ),
+    );
+
+    expect(find.text('6222 **** **** 3699'), findsOneWidget);
+  });
+
   group('buildSubtitle 拼接规则', () {
     final masked = CardNumberValidation.maskForList('6222365623223699');
 
@@ -90,6 +113,18 @@ void main() {
           remarkShort: '',
         ),
         '$masked\n有效期 02/27',
+      );
+    });
+
+    test('姓名存在但无有效期和备注时仍显示卡号', () {
+      expect(
+        CardTile.buildSubtitle(
+          showCardNumber: true,
+          masked: masked,
+          expiryText: '',
+          remarkShort: '',
+        ),
+        masked,
       );
     });
 

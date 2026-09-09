@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/database/encrypted_database.dart';
 import '../../../shared/utils/card_number_utils.dart';
 import '../../../shared/utils/document_id_utils.dart';
+import '../../../shared/utils/text_sanitizer.dart';
 import '../../../shared/validation/validators.dart';
 import '../../wallet/domain/document.dart';
 import '../../wallet/domain/models.dart';
@@ -367,8 +368,7 @@ final class CsvImportService {
   }
 
   static String? _optional(String? value) {
-    final trimmed = value?.trim();
-    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+    return TextSanitizer.clean(value);
   }
 
   static String _categoryKey(CardType type, String name) =>
@@ -517,7 +517,7 @@ final class _CsvParser {
   }
 
   static String _normalizeHeader(String raw) {
-    var header = raw.trim();
+    var header = TextSanitizer.clean(raw) ?? '';
     // 模板用中文全角括号标记可选字段；也接受半角括号，便于用户编辑。
     header = header.replaceFirst(RegExp(r'\s*[（(][^（）()]*[）)]\s*$'), '');
     return _headerAliases[header] ?? header;

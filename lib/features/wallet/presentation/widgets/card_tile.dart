@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/services/clipboard_service.dart';
 import '../../../../shared/utils/card_number_utils.dart';
+import '../../../../shared/utils/text_sanitizer.dart';
 import '../../domain/models.dart';
 
 /// 分类详情页中的银行卡片瓦片。
@@ -30,12 +31,13 @@ class CardTile extends ConsumerWidget {
     final tileKey = GlobalKey();
     final masked = CardNumberValidation.maskForList(card.cardNumber);
     // 显示顺序：姓名 → 卡号 → 有效期（同行追加备注，超 6 字截断）。
-    final hasName = card.holderName != null && card.holderName!.isNotEmpty;
+    final holderName = TextSanitizer.clean(card.holderName);
+    final hasName = holderName != null;
     final expiryText = card.expiryMonth == null || card.expiryYear == null
         ? ''
         : '${card.expiryMonth.toString().padLeft(2, '0')}/'
               '${(card.expiryYear! % 100).toString().padLeft(2, '0')}';
-    final remark = card.note ?? '';
+    final remark = TextSanitizer.clean(card.note) ?? '';
     final remarkShort = remark.length > 6
         ? '${remark.substring(0, 6)}…'
         : remark;
@@ -63,7 +65,7 @@ class CardTile extends ConsumerWidget {
                     ),
                   ),
             title: Text(
-              hasName ? card.holderName! : masked,
+              hasName ? holderName : masked,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             isThreeLine: true,
@@ -111,8 +113,11 @@ class CardTile extends ConsumerWidget {
       detailParts.add(remarkShort);
     }
     final detailLine = detailParts.join(' ');
-    if (!showCardNumber || detailLine.isEmpty) {
+    if (!showCardNumber) {
       return detailLine;
+    }
+    if (detailLine.isEmpty) {
+      return masked;
     }
     return '$masked\n$detailLine';
   }

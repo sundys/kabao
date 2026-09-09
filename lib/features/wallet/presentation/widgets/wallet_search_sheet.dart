@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../shared/utils/card_number_utils.dart';
 import '../../../../shared/utils/category_colors.dart';
+import '../../../../shared/utils/text_sanitizer.dart';
 import '../../../../app/providers/repositories_providers.dart';
 import '../../domain/models.dart';
 
@@ -60,9 +61,10 @@ final walletSearchResultsProvider =
             recordId: card.id,
             categoryId: card.categoryId,
             categoryName: categoryById[card.categoryId]?.name ?? '未分类',
-            title: (card.holderName?.isNotEmpty ?? false)
-                ? card.holderName!
-                : categoryById[card.categoryId]?.name ?? '未命名卡片',
+            title:
+                TextSanitizer.clean(card.holderName) ??
+                categoryById[card.categoryId]?.name ??
+                '未命名卡片',
             maskedNumber: CardNumberValidation.maskForList(card.cardNumber),
             routeValue: card,
           ),

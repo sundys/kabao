@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../shared/services/clipboard_service.dart';
 import '../../../../shared/utils/card_number_utils.dart';
+import '../../../../shared/utils/text_sanitizer.dart';
 import '../../domain/models.dart';
 import '../../logic/cards_controller.dart';
 
@@ -16,9 +17,10 @@ class CardDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final grouped = CardNumberValidation.groupForDisplay(card.cardNumber);
+    final holderName = TextSanitizer.clean(card.holderName);
+    final note = TextSanitizer.clean(card.note);
     final rows = <(String, String)>[
-      if (card.holderName != null && card.holderName!.isNotEmpty)
-        ('姓名', card.holderName!),
+      if (holderName != null) ('姓名', holderName),
       ('卡号', grouped),
       if (card.expiryMonth != null && card.expiryYear != null)
         (
@@ -34,7 +36,7 @@ class CardDetailPage extends ConsumerWidget {
               '${card.uShieldExpiryDate!.month.toString().padLeft(2, '0')}/'
               '${card.uShieldExpiryDate!.day.toString().padLeft(2, '0')}',
         ),
-      if (card.note != null && card.note!.isNotEmpty) ('备注', card.note!),
+      if (note != null) ('备注', note),
     ];
 
     bool boldValue(String label) =>

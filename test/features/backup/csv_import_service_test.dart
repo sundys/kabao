@@ -49,6 +49,19 @@ void main() {
     expect(draft.snapshot.cards.single.cardNumber, '6222111111111111');
   });
 
+  test('银行卡 CSV 清理不可见字符且不把空姓名当作内容', () {
+    final draft = CsvImportService(categories: const [], database: db).prepare(
+      kind: CsvImportKind.cards,
+      contents:
+          'record_type,category_type,category_name,holder_name,card_number,note\n'
+          'card,debit,工商银行,\u200B\uFEFF,6222111111111111,\u200B备注\uFEFF\n',
+    );
+    expect(draft.isValid, isTrue);
+    expect(draft.snapshot.cards.single.holderName, isNull);
+    expect(draft.snapshot.cards.single.cardNumber, '6222111111111111');
+    expect(draft.snapshot.cards.single.note, '备注');
+  });
+
   test('证件 CSV 非长期有效必须有合法日期', () {
     final draft = CsvImportService(categories: const [], database: db).prepare(
       kind: CsvImportKind.documents,
