@@ -21,7 +21,7 @@ CardRecord _card() {
 }
 
 void main() {
-  testWidgets('填了姓名的卡片：标题显示姓名，副标题第一行卡号、第二行有效期与备注', (tester) async {
+  testWidgets('填了姓名的卡片：第一行姓名加备注，第二行显示脱敏卡号', (tester) async {
     final card = _card();
     await tester.pumpWidget(
       MaterialApp(
@@ -31,11 +31,9 @@ void main() {
       ),
     );
 
-    expect(find.text('张三'), findsOneWidget);
-    // 第一行：脱敏卡号。
+    expect(find.text('张三 工商银行工资卡备'), findsOneWidget);
+    // 第二行：脱敏卡号。
     expect(find.textContaining('6222 **** **** 3699'), findsOneWidget);
-    // 第二行：有效期 + 截断备注（超 6 字）。
-    expect(find.textContaining('有效期 02/27 工商银行工资…'), findsOneWidget);
   });
 
   testWidgets('ReorderableListView 中的卡片点击仍触发详情回调', (tester) async {
@@ -60,7 +58,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('张三'));
+    await tester.tap(find.textContaining('张三'));
     await tester.pump();
 
     expect(tapped, isTrue);
@@ -89,55 +87,39 @@ void main() {
     expect(find.text('6222 **** **** 3699'), findsOneWidget);
   });
 
-  group('buildSubtitle 拼接规则', () {
+  testWidgets('卡片条目使用紧凑的两行高度', (tester) async {
+    final card = _card();
+    await tester.binding.setSurfaceSize(const Size(600, 200));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardTile(card: card, categoryColor: const Color(0xFFDCEFE3)),
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(ListTile)).height, lessThan(72));
+  });
+
+  group('buildSubtitle 显示规则', () {
     final masked = CardNumberValidation.maskForList('6222365623223699');
 
-    test('有姓名：第一行卡号，第二行有效期 + 备注', () {
+    test('有姓名：副标题显示脱敏卡号', () {
       expect(
-        CardTile.buildSubtitle(
-          showCardNumber: true,
-          masked: masked,
-          expiryText: '02/27',
-          remarkShort: '工商银行工资…',
-        ),
-        '$masked\n有效期 02/27 工商银行工资…',
-      );
-    });
-
-    test('备注为空时第二行只有有效期', () {
-      expect(
-        CardTile.buildSubtitle(
-          showCardNumber: true,
-          masked: masked,
-          expiryText: '02/27',
-          remarkShort: '',
-        ),
-        '$masked\n有效期 02/27',
-      );
-    });
-
-    test('姓名存在但无有效期和备注时仍显示卡号', () {
-      expect(
-        CardTile.buildSubtitle(
-          showCardNumber: true,
-          masked: masked,
-          expiryText: '',
-          remarkShort: '',
-        ),
+        CardTile.buildSubtitle(showCardNumber: true, masked: masked),
         masked,
       );
     });
 
-    test('无姓名（标题即卡号）时副标题不重复显示卡号', () {
+    test('有姓名但没有额外详情时仍显示脱敏卡号', () {
       expect(
-        CardTile.buildSubtitle(
-          showCardNumber: false,
-          masked: masked,
-          expiryText: '02/27',
-          remarkShort: '备注',
-        ),
-        '有效期 02/27 备注',
+        CardTile.buildSubtitle(showCardNumber: true, masked: masked),
+        masked,
       );
+    });
+
+    test('无姓名：副标题为空，标题已显示卡号', () {
+      expect(CardTile.buildSubtitle(showCardNumber: false, masked: masked), '');
     });
   });
 }
