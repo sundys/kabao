@@ -7,7 +7,8 @@ import '../../../../shared/utils/text_sanitizer.dart';
 import '../../domain/models.dart';
 
 /// 分类详情页中的银行卡片瓦片。
-/// 标题：姓名 + 备注（未填姓名则为卡号）；副标题：脱敏卡号。
+/// 三行布局：第一行姓名+卡种；第二行脱敏卡号；第三行有效期+备注。
+/// 三行高度固定，保证不同内容的卡片行与列对齐；卡种、备注允许为空。
 class CardTile extends ConsumerWidget {
   const CardTile({
     super.key,
@@ -26,19 +27,19 @@ class CardTile extends ConsumerWidget {
   /// 点击卡片（进入详情页），由调用方注入。
   final VoidCallback? onTap;
 
+  static const double _lineHeight = 20;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tileKey = GlobalKey();
+    final theme = Theme.of(context);
     final masked = CardNumberValidation.maskForList(card.cardNumber);
-    // 两行布局可让长列表更紧凑；备注只作为辅助信息，避免撑高卡片。
     final holderName = TextSanitizer.clean(card.holderName);
-    final hasName = holderName != null;
-    final remark = TextSanitizer.clean(card.note) ?? '';
-    final remarkShort = remark.length > 8 ? remark.substring(0, 8) : remark;
-    final title = hasName
-        ? (remarkShort.isEmpty ? holderName : '$holderName $remarkShort')
-        : masked;
-    final subtitle = buildSubtitle(showCardNumber: hasName, masked: masked);
+    final cardKind = TextSanitizer.clean(card.cardKind);
+    final secondaryStyle = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
@@ -48,35 +49,75 @@ class CardTile extends ConsumerWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 4,
-            ),
-            visualDensity: VisualDensity.compact,
-            leading: dragIndex == null
-                ? const Icon(Icons.credit_card)
-                : Tooltip(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 4, 8),
+            child: Row(
+              children: [
+                if (dragIndex == null)
+                  const Icon(Icons.credit_card)
+                else
+                  Tooltip(
                     message: '拖动排序',
                     child: ReorderableDragStartListener(
                       index: dragIndex!,
                       child: const Icon(Icons.credit_card),
                     ),
                   ),
-            title: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _fixedLine(
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                holderName ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (holderName != null && cardKind != null)
+                              const SizedBox(width: 8),
+                            if (cardKind != null)
+                              Flexible(
+                                child: Text(
+                                  cardKind,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: secondaryStyle,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      _fixedLine(
+                        Text(
+                          masked,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      _fixedLine(
+                        Text(
+                          _thirdLine(card),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: secondaryStyle,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.copy_outlined),
                   tooltip: '复制卡号',
@@ -95,11 +136,25 @@ class CardTile extends ConsumerWidget {
     );
   }
 
-  /// 副标题：已填姓名时显示脱敏卡号；未填姓名时标题已是卡号，不重复显示。
-  static String buildSubtitle({
-    required bool showCardNumber,
-    required String masked,
-  }) {
-    return showCardNumber ? masked : '';
+  /// 固定高度的行容器：空字段仍占一行，保证多张卡片三行对齐。
+  static Widget _fixedLine(Widget child) => SizedBox(
+    height: _lineHeight,
+    child: Align(alignment: Alignment.centerLeft, child: child),
+  );
+
+  /// 第三行内容：有效期（MM/YY）+ 备注。
+  static String _thirdLine(CardRecord card) {
+    final parts = <String>[];
+    if (card.expiryMonth != null && card.expiryYear != null) {
+      parts.add(
+        '${card.expiryMonth.toString().padLeft(2, '0')}/'
+        '${(card.expiryYear! % 100).toString().padLeft(2, '0')}',
+      );
+    }
+    final note = TextSanitizer.clean(card.note);
+    if (note != null) {
+      parts.add(note);
+    }
+    return parts.join('  ');
   }
 }

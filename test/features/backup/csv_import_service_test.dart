@@ -41,12 +41,33 @@ void main() {
     final draft = CsvImportService(categories: const [], database: db).prepare(
       kind: CsvImportKind.cards,
       contents:
-          '记录类型（可选）,分类类型,分类名称,分类ID（可选）,记录ID（可选）,持有人姓名（可选）,卡号,有效期（可选）,CVV（可选）,U盾到期日（可选）,备注（可选）,创建时间（可选）,更新时间（可选）\n'
-          ',借记卡,农业银行,,,,6222111111111111,,,,,,\n',
+          '记录类型（可选）,分类类型,分类名称,分类ID（可选）,记录ID（可选）,持有人姓名（可选）,卡种（可选）,卡号,有效期（可选）,CVV（可选）,U盾到期日（可选）,备注（可选）,创建时间（可选）,更新时间（可选）\n'
+          ',借记卡,农业银行,,,,,6222111111111111,,,,,,\n',
     );
     expect(draft.isValid, isTrue);
     expect(draft.snapshot.cards.single.cardType, CardType.debit);
     expect(draft.snapshot.cards.single.cardNumber, '6222111111111111');
+  });
+
+  test('卡种列可导入且超长时拒绝', () {
+    final draft = CsvImportService(categories: const [], database: db).prepare(
+      kind: CsvImportKind.cards,
+      contents:
+          'record_type,category_type,category_name,card_kind,card_number\n'
+          'card,credit,工商银行,白金卡,6222111111111111\n',
+    );
+    expect(draft.isValid, isTrue);
+    expect(draft.snapshot.cards.single.cardKind, '白金卡');
+
+    final invalid = CsvImportService(categories: const [], database: db)
+        .prepare(
+          kind: CsvImportKind.cards,
+          contents:
+              'record_type,category_type,category_name,card_kind,card_number\n'
+              'card,credit,工商银行,${'卡' * 21},6222111111111111\n',
+        );
+    expect(invalid.isValid, isFalse);
+    expect(invalid.errors.single.field, 'card_kind');
   });
 
   test('银行卡 CSV 清理不可见字符且不把空姓名当作内容', () {

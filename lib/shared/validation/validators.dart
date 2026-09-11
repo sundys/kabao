@@ -129,8 +129,25 @@ final class Validators {
     }
     return null;
   }
+
+  /// 卡种为可选自由文本，最多 20 字。
+  static String? cardKind(String? raw) {
+    if (raw == null) {
+      return null;
+    }
+    final count = raw.characters.length;
+    if (count > CardKindLimit.max) {
+      return '卡种最多 ${CardKindLimit.max} 字';
+    }
+    return null;
+  }
 }
 
 abstract final class CardRecordNoteLimit {
   static const int max = 500;
+}
+
+/// 卡种字段长度上限，与 `CardRecord.maxCardKindLength` 保持一致。
+abstract final class CardKindLimit {
+  static const int max = 20;
 }

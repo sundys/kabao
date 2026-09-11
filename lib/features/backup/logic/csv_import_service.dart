@@ -193,6 +193,10 @@ final class CsvImportService {
       throw _RowError('cvv', 'CVV 应为 3 位数字');
     }
     final uShield = _parseSlashDate(row['u_shield_expiry'], 'u_shield_expiry');
+    final cardKind = _optional(row['card_kind']);
+    if (Validators.cardKind(cardKind) != null) {
+      throw _RowError('card_kind', '卡种最多 20 字');
+    }
     final note = _optional(row['note']);
     if (Validators.note(note) != null) throw _RowError('note', '备注最多 500 字');
     final id = _id(row['id'], now);
@@ -203,6 +207,7 @@ final class CsvImportService {
       cardType: type,
       cardNumber: number,
       holderName: _optional(row['holder_name']),
+      cardKind: cardKind,
       expiryMonth: expiry?.$1,
       expiryYear: expiry?.$2,
       cvv: cvv,
@@ -381,6 +386,7 @@ final class CsvImportService {
     'category_id',
     'id',
     'holder_name',
+    'card_kind',
     'card_number',
     'expiry',
     'cvv',
@@ -424,6 +430,7 @@ final class _CsvParser {
     '分类ID': 'category_id',
     '记录ID': 'id',
     '持有人姓名': 'holder_name',
+    '卡种': 'card_kind',
     '卡号': 'card_number',
     '有效期': 'expiry',
     'CVV': 'cvv',

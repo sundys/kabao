@@ -79,6 +79,7 @@ class CardRecord {
     required this.cardType,
     required this.cardNumber,
     this.holderName,
+    this.cardKind,
     this.sortOrder = 0,
     this.expiryMonth,
     this.expiryYear,
@@ -92,6 +93,9 @@ class CardRecord {
 
   static const int maxNoteLength = 500;
 
+  /// 卡种（如“标准卡/白金卡”），可选自由文本。
+  static const int maxCardKindLength = 20;
+
   final String id;
   final String categoryId;
   final CardType cardType;
@@ -101,6 +105,9 @@ class CardRecord {
 
   /// 持卡人姓名（可选）。
   final String? holderName;
+
+  /// 卡种（可选），如“标准卡”“白金卡”。
+  final String? cardKind;
 
   /// 手动排序序号；0 表示未手动排序。
   final int sortOrder;
@@ -129,6 +136,7 @@ class CardRecord {
     cardType: cardType,
     cardNumber: cardNumber,
     holderName: holderName,
+    cardKind: cardKind,
     sortOrder: value,
     expiryMonth: expiryMonth,
     expiryYear: expiryYear,
@@ -142,6 +150,7 @@ class CardRecord {
 
   String payloadJson() => jsonEncode({
     'holderName': holderName,
+    'cardKind': cardKind,
     'cardNumber': cardNumber,
     'sortOrder': sortOrder,
     'expiryMonth': expiryMonth,
@@ -165,6 +174,7 @@ class CardRecord {
       cardType: cardTypeFromWire(metadata['card_type']! as String),
       cardNumber: payload['cardNumber']! as String,
       holderName: payload['holderName'] as String?,
+      cardKind: payload['cardKind'] as String?,
       sortOrder: (metadata['sort_order'] as num?)?.toInt() ?? 0,
       expiryMonth: (payload['expiryMonth'] as num?)?.toInt(),
       expiryYear: (payload['expiryYear'] as num?)?.toInt(),

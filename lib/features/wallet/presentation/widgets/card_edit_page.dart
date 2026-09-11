@@ -32,12 +32,14 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
   final _formKey = GlobalKey<FormState>();
   bool _saving = false;
   late final TextEditingController _nameController;
+  late final TextEditingController _cardKindController;
 
   @override
   void initState() {
     super.initState();
     final card = widget.card;
     _nameController = TextEditingController(text: card.holderName ?? '');
+    _cardKindController = TextEditingController(text: card.cardKind ?? '');
     _numberController = TextEditingController(
       text: CardNumberValidation.groupForDisplay(card.cardNumber),
     );
@@ -61,6 +63,7 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _cardKindController.dispose();
     _numberController.dispose();
     _expiryController.dispose();
     _cvvController.dispose();
@@ -102,6 +105,9 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
         cardType: widget.card.cardType,
         cardNumber: number,
         holderName: holderName.isEmpty ? null : holderName,
+        cardKind: _cardKindController.text.trim().isEmpty
+            ? null
+            : _cardKindController.text.trim(),
         expiryMonth: month,
         expiryYear: year,
         cvv: _cvvController.text.trim().isEmpty
@@ -148,15 +154,40 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            TextFormField(
-              key: const Key('card-name-field'),
-              controller: _nameController,
-              maxLength: 20,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: '姓名',
-                counterText: '',
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 姓名缩短，右侧留给卡种输入框。
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    key: const Key('card-name-field'),
+                    controller: _nameController,
+                    maxLength: 10,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: '姓名',
+                      counterText: '',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 3,
+                  child: TextFormField(
+                    key: const Key('card-kind-field'),
+                    controller: _cardKindController,
+                    maxLength: 20,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: '卡种',
+                      hintText: '如：白金卡',
+                      counterText: '',
+                    ),
+                    validator: Validators.cardKind,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             TextFormField(

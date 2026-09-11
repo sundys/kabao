@@ -28,7 +28,7 @@ except ImportError as exc:  # pragma: no cover - exercised by CLI users
 
 CARD_HEADERS = [
     "记录类型（可选）", "分类类型", "分类名称", "分类ID（可选）",
-    "记录ID（可选）", "持有人姓名（可选）", "卡号", "有效期（可选）",
+    "记录ID（可选）", "持有人姓名（可选）", "卡种（可选）", "卡号", "有效期（可选）",
     "CVV（可选）", "U盾到期日（可选）", "备注（可选）", "创建时间（可选）",
     "更新时间（可选）",
 ]
@@ -46,6 +46,7 @@ ALIASES = {
     "分类ID": "category_id", "category_id": "category_id",
     "记录ID": "id", "id": "id",
     "持有人姓名": "holder_name", "holder_name": "holder_name", "姓名": "holder_name",
+    "卡种": "card_kind", "card_kind": "card_kind",
     "卡号": "card_number", "card_number": "card_number",
     "有效期": "expiry", "expiry": "expiry",
     "CVV": "cvv", "cvv": "cvv",
@@ -194,6 +195,7 @@ def convert(input_path: Path, output_path: Path, kind: str, sheet_name: str | No
             out["分类ID（可选）"] = text_value(source.get("category_id"))
             out["记录ID（可选）"] = text_value(source.get("id"))
             out["持有人姓名（可选）"] = text_value(source.get("holder_name"))
+            out["卡种（可选）"] = text_value(source.get("card_kind"))
             out["创建时间（可选）"] = normalize_date(source.get("created_at"), book, sheet, row_idx, canonical.get("created_at", -1), "iso")
             out["更新时间（可选）"] = normalize_date(source.get("updated_at"), book, sheet, row_idx, canonical.get("updated_at", -1), "iso")
             if kind == "cards":

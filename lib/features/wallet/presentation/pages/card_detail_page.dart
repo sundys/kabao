@@ -21,6 +21,8 @@ class CardDetailPage extends ConsumerWidget {
     final note = TextSanitizer.clean(card.note);
     final rows = <(String, String)>[
       if (holderName != null) ('姓名', holderName),
+      if (TextSanitizer.clean(card.cardKind) != null)
+        ('卡种', TextSanitizer.clean(card.cardKind)!),
       ('卡号', grouped),
       if (card.expiryMonth != null && card.expiryYear != null)
         (
