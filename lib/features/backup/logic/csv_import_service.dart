@@ -160,6 +160,10 @@ final class CsvImportService {
     return BackupService(database: database).importMerge(draft.snapshot);
   }
 
+  /// 去除全部 Unicode 空白（含 NBSP、全角空格）后返回；null 表示单元格为空。
+  static String? _compactType(String? raw) =>
+      TextSanitizer.clean(raw)?.replaceAll(RegExp(r'\s+'), '');
+
   CardRecord _parseCard(
     Map<String, String> row,
     int rowNumber,
@@ -168,12 +172,16 @@ final class CsvImportService {
     Map<String, BankCategory> categoriesByKey,
     Map<String, BankCategory> pending,
   ) {
-    final recordType = _optional(row['record_type']);
-    if (recordType != null &&
-        recordType != 'card' &&
-        recordType != '卡片' &&
-        recordType != '银行卡') {
-      throw _RowError('record_type', '银行卡模板必须使用 card');
+    final recordType = _compactType(row['record_type']);
+    if (recordType != null && recordType != 'card') {
+      if (recordType == '证件' ||
+          recordType == '证件卡' ||
+          recordType == 'document') {
+        throw _RowError('record_type', '这是证件数据，请使用“批量导入证件”入口');
+      }
+      if (recordType != '卡片' && recordType != '银行卡') {
+        throw _RowError('record_type', '银行卡模板必须使用 card，当前为“$recordType”');
+      }
     }
     final type = _cardType(row['category_type'], rowNumber);
     final category = _resolveCategory(
@@ -226,12 +234,15 @@ final class CsvImportService {
     Map<String, BankCategory> categoriesByKey,
     Map<String, BankCategory> pending,
   ) {
-    final rawType = _optional(row['category_type']);
+    final rawType = _compactType(row['category_type']);
     if (rawType != null &&
         rawType != 'document' &&
         rawType != '证件' &&
         rawType != '证件卡') {
-      throw _RowError('category_type', '证件模板只能填写 document/证件/证件卡');
+      throw _RowError(
+        'category_type',
+        '证件模板的分类类型只能填写 document/证件/证件卡，当前为“$rawType”',
+      );
     }
     final category = _resolveCategory(
       row,
@@ -327,12 +338,17 @@ final class CsvImportService {
   }
 
   CardType _cardType(String? raw, int row) {
-    return switch (_optional(raw)) {
+    final value = _compactType(raw);
+    return switch (value) {
       'debit' || '借记卡' || '借记' || '储蓄卡' => CardType.debit,
       'credit' || '信用卡' || '贷记卡' => CardType.credit,
+      'document' ||
+      '证件' ||
+      '证件卡' => throw _RowError('category_type', '这是证件数据，请使用“批量导入证件”入口'),
       _ => throw _RowError(
         'category_type',
-        '只能填写 debit/借记卡（储蓄卡） 或 credit/信用卡（贷记卡）',
+        '只能填写 debit/借记卡（储蓄卡） 或 credit/信用卡（贷记卡），'
+            '当前为${value == null ? '空' : '“$value”'}',
       ),
     };
   }

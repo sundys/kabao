@@ -106,6 +106,29 @@ void main() {
     }
   });
 
+  test('分类类型含空白字符（含 NBSP/全角空格）仍可导入', () {
+    for (final raw in const ['证件卡\u00A0', '\u3000证件卡 ', '证 件 卡']) {
+      final draft = CsvImportService(categories: const [], database: db).prepare(
+        kind: CsvImportKind.documents,
+        contents:
+            'record_type,category_type,category_name,id_number,issuer,validity_permanent\n'
+            'document,$raw,身份证,110000000000000000,公安局,true\n',
+      );
+      expect(draft.isValid, isTrue, reason: raw.codeUnits.toString());
+    }
+  });
+
+  test('证件数据走银行卡导入时提示使用证件入口', () {
+    final draft = CsvImportService(categories: const [], database: db).prepare(
+      kind: CsvImportKind.cards,
+      contents:
+          'record_type,category_type,category_name,card_number\n'
+          'document,证件卡,身份证,6222111111111111\n',
+    );
+    expect(draft.isValid, isFalse);
+    expect(draft.errors.single.message, contains('请使用“批量导入证件”入口'));
+  });
+
   test('银行卡分类类型接受借记/储蓄卡、贷记卡别名', () {
     for (final entry in const {
       '借记卡': CardType.debit,
