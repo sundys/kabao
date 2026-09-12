@@ -227,8 +227,11 @@ final class CsvImportService {
     Map<String, BankCategory> pending,
   ) {
     final rawType = _optional(row['category_type']);
-    if (rawType != null && rawType != 'document' && rawType != '证件') {
-      throw _RowError('category_type', '证件模板必须使用 document');
+    if (rawType != null &&
+        rawType != 'document' &&
+        rawType != '证件' &&
+        rawType != '证件卡') {
+      throw _RowError('category_type', '证件模板只能填写 document/证件/证件卡');
     }
     final category = _resolveCategory(
       row,
@@ -325,9 +328,12 @@ final class CsvImportService {
 
   CardType _cardType(String? raw, int row) {
     return switch (_optional(raw)) {
-      'debit' || '借记卡' => CardType.debit,
-      'credit' || '信用卡' => CardType.credit,
-      _ => throw _RowError('category_type', '只能填写 debit/借记卡 或 credit/信用卡'),
+      'debit' || '借记卡' || '借记' || '储蓄卡' => CardType.debit,
+      'credit' || '信用卡' || '贷记卡' => CardType.credit,
+      _ => throw _RowError(
+        'category_type',
+        '只能填写 debit/借记卡（储蓄卡） 或 credit/信用卡（贷记卡）',
+      ),
     };
   }
 

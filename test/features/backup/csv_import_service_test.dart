@@ -94,6 +94,36 @@ void main() {
     expect(draft.errors.single.field, 'valid_from');
   });
 
+  test('证件分类类型接受 document/证件/证件卡', () {
+    for (final raw in const ['document', '证件', '证件卡']) {
+      final draft = CsvImportService(categories: const [], database: db).prepare(
+        kind: CsvImportKind.documents,
+        contents:
+            'record_type,category_type,category_name,id_number,issuer,validity_permanent\n'
+            'document,$raw,身份证,110000000000000000,公安局,true\n',
+      );
+      expect(draft.isValid, isTrue, reason: raw);
+    }
+  });
+
+  test('银行卡分类类型接受借记/储蓄卡、贷记卡别名', () {
+    for (final entry in const {
+      '借记卡': CardType.debit,
+      '储蓄卡': CardType.debit,
+      '贷记卡': CardType.credit,
+    }.entries) {
+      final draft = CsvImportService(categories: const [], database: db)
+          .prepare(
+            kind: CsvImportKind.cards,
+            contents:
+                'record_type,category_type,category_name,card_number\n'
+                'card,${entry.key},工商银行,6222111111111111\n',
+          );
+      expect(draft.isValid, isTrue, reason: entry.key);
+      expect(draft.snapshot.cards.single.cardType, entry.value);
+    }
+  });
+
   test('重复 ID 和错误列数均不允许导入', () {
     const csv =
         'record_type,category_type,category_name,card_number,id\n'
