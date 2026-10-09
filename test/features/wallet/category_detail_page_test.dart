@@ -170,7 +170,23 @@ void main() {
 
     await _openSearchSheet(tester);
 
-    // 空查询下列出作用域内的全部记录：仅本分类的一张卡片。
+    // 未输入关键词时只显示提示，不展示默认卡片。
+    expect(find.text('输入关键词搜索本分类内的记录'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(WalletSearchSheet),
+        matching: find.byType(ListTile),
+      ),
+      findsNothing,
+    );
+
+    // "****" 同时命中两个分类下的卡片掩码；分类内搜索只能返回当前分类的 1 条。
+    await tester.enterText(
+      find.byKey(const Key('wallet-search-field')),
+      '****',
+    );
+    await _settleRepositoryReads(tester);
+
     final sheetResults = find.descendant(
       of: find.byType(WalletSearchSheet),
       matching: find.byType(ListTile),

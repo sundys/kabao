@@ -103,15 +103,21 @@ class WalletSearchSheet extends ConsumerStatefulWidget {
 }
 
 class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
+  final TextEditingController _controller = TextEditingController();
   String _query = '';
 
   bool get _isScoped => widget.categoryId != null;
 
+  bool get _hasQuery => _query.trim().isNotEmpty;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   bool _matches(WalletSearchResult result) {
     final query = _query.trim().toLowerCase();
-    if (query.isEmpty) {
-      return true;
-    }
     return result.title.toLowerCase().contains(query) ||
         result.categoryName.toLowerCase().contains(query) ||
         result.maskedNumber.replaceAll(' ', '').contains(query);
@@ -119,10 +125,12 @@ class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final resultsAsync = ref.watch(
-      walletSearchResultsProvider(widget.categoryId),
-    );
     final theme = Theme.of(context);
+    // 未输入关键词时不加载任何记录：搜索面板打开后只显示提示，
+    // 不暴露默认的卡片列表。
+    final resultsAsync = _hasQuery
+        ? ref.watch(walletSearchResultsProvider(widget.categoryId))
+        : null;
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
@@ -136,11 +144,23 @@ class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: TextField(
                   key: const Key('wallet-search-field'),
+                  controller: _controller,
                   autofocus: true,
                   onChanged: (value) => setState(() => _query = value),
                   decoration: InputDecoration(
                     hintText: _isScoped ? '搜索本分类内的记录' : '搜索姓名、卡号或分类',
                     prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _hasQuery
+                        ? IconButton(
+                            key: const Key('wallet-search-clear'),
+                            tooltip: '清除',
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              _controller.clear();
+                              setState(() => _query = '');
+                            },
+                          )
+                        : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -148,73 +168,88 @@ class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
                 ),
               ),
               Expanded(
-                child: resultsAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (_, _) => Center(
-                    child: Text('搜索数据加载失败', style: theme.textTheme.bodyMedium),
-                  ),
-                  data: (results) {
-                    final visible = results.where(_matches).toList();
-                    if (visible.isEmpty) {
-                      return Center(
+                child: resultsAsync == null
+                    ? Center(
                         child: Text(
-                          _query.trim().isEmpty ? '暂无记录' : '没有匹配的记录',
+                          _isScoped ? '输入关键词搜索本分类内的记录' : '输入关键词搜索卡片或证件',
                           style: theme.textTheme.bodyMedium,
                         ),
-                      );
-                    }
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                      itemCount: visible.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final result = visible[index];
-                        return ListTile(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                      )
+                    : resultsAsync.when(
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (_, _) => Center(
+                          child: Text(
+                            '搜索数据加载失败',
+                            style: theme.textTheme.bodyMedium,
                           ),
-                          tileColor: CategoryColors.forId(
-                            result.categoryId,
-                          ).withValues(alpha: .30),
-                          leading: Icon(
-                            result.kind == WalletSearchKind.bankCard
-                                ? Icons.credit_card_outlined
-                                : Icons.badge_outlined,
-                          ),
-                          title: Text(
-                            result.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          subtitle: Text(
-                            // 分类内搜索时结果必然同属当前分类，无需重复分类名。
-                            _isScoped
-                                ? result.maskedNumber
-                                : '${result.categoryName} · ${result.maskedNumber}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            if (result.kind == WalletSearchKind.bankCard) {
-                              context.push(
-                                '/wallet/card/${result.recordId}',
-                                extra: result.routeValue,
+                        ),
+                        data: (results) {
+                          final visible = results.where(_matches).toList();
+                          if (visible.isEmpty) {
+                            return Center(
+                              child: Text(
+                                '没有匹配的记录',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            );
+                          }
+                          return ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                            itemCount: visible.length,
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final result = visible[index];
+                              return ListTile(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                tileColor: CategoryColors.forId(
+                                  result.categoryId,
+                                ).withValues(alpha: .30),
+                                leading: Icon(
+                                  result.kind == WalletSearchKind.bankCard
+                                      ? Icons.credit_card_outlined
+                                      : Icons.badge_outlined,
+                                ),
+                                title: Text(
+                                  result.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  // 分类内搜索时结果必然同属当前分类，无需重复分类名。
+                                  _isScoped
+                                      ? result.maskedNumber
+                                      : '${result.categoryName} · '
+                                            '${result.maskedNumber}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  if (result.kind ==
+                                      WalletSearchKind.bankCard) {
+                                    context.push(
+                                      '/wallet/card/${result.recordId}',
+                                      extra: result.routeValue,
+                                    );
+                                  } else {
+                                    context.push(
+                                      '/wallet/document/${result.recordId}',
+                                      extra: result.routeValue,
+                                    );
+                                  }
+                                },
                               );
-                            } else {
-                              context.push(
-                                '/wallet/document/${result.recordId}',
-                                extra: result.routeValue,
-                              );
-                            }
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
+                            },
+                          );
+                        },
+                      ),
               ),
             ],
           ),

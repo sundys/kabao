@@ -32,13 +32,15 @@ void main() {
     expect(find.byIcon(Icons.add), findsOneWidget);
   });
 
-  testWidgets('右下角搜索入口打开本地搜索面板', (tester) async {
+  testWidgets('右下角搜索入口打开本地搜索面板，默认不展示任何记录', (tester) async {
     await pumpWallet(tester);
 
     await tester.tap(find.byKey(const Key('wallet-search-button')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('wallet-search-field')), findsOneWidget);
-    expect(find.text('暂无记录'), findsOneWidget);
+    // 未输入关键词时只给提示，不泄露默认的卡片列表。
+    expect(find.text('输入关键词搜索卡片或证件'), findsOneWidget);
+    expect(find.byType(ListTile), findsNothing);
   });
 }
