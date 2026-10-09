@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  更新包只写入应用私有缓存目录下的 updates/ 子目录，
+  与 AppConfig.updateCacheDirName 保持一致。
+-->
+<paths>
+    <cache-path name="apk_updates" path="updates/" />
+</paths>

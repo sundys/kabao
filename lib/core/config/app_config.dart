@@ -16,4 +16,24 @@ abstract final class AppConfig {
   /// 发布页面（最新版本下载地址）。
   static const String latestReleaseUrl =
       'https://github.com/$githubRepo/releases/latest';
+
+  /// GitHub Releases API：读取最新版本的标签、说明与 APK 资源地址。
+  static const String latestReleaseApiUrl =
+      'https://api.github.com/repos/$githubRepo/releases/latest';
+
+  /// 国内常用的 GitHub 加速前缀；空串表示直连。
+  ///
+  /// 检测更新与下载 APK 都会按顺序依次尝试，只要有一个可用即停止。
+  /// 这些地址只做请求转发，不会收到任何用户数据。
+  static const List<String> githubProxies = [
+    '',
+    'https://ghfast.top/',
+    'https://gh-proxy.com/',
+    'https://ghproxy.net/',
+    'https://mirror.ghproxy.com/',
+    'https://hk.gh-proxy.com/',
+  ];
+
+  /// 更新包下载后存放的缓存子目录（需与 android file_paths.xml 保持一致）。
+  static const String updateCacheDirName = 'updates';
 }

@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/config/app_config.dart';
+import '../widgets/update_dialog.dart';
 
 /// 版本号从应用包信息动态读取，随构建自动更新。
 final _versionProvider = FutureProvider<String>((ref) async {
@@ -55,10 +56,10 @@ class AboutPage extends ConsumerWidget {
             onTap: () => launchUrl(Uri.parse(AppConfig.githubHomepage)),
           ),
           ListTile(
-            leading: const Icon(Icons.download_outlined),
-            title: const Text('最新版本下载'),
-            subtitle: const Text(AppConfig.latestReleaseUrl),
-            onTap: () => launchUrl(Uri.parse(AppConfig.latestReleaseUrl)),
+            leading: const Icon(Icons.system_update_alt_rounded),
+            title: const Text('检测更新'),
+            subtitle: const Text('检查 GitHub 上的最新版本并安装'),
+            onTap: () => checkForUpdates(context),
           ),
           ListTile(
             leading: const Icon(Icons.table_view_outlined),
