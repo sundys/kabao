@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -149,6 +150,8 @@ final class UpdateService {
     required String currentVersion,
     CancelToken? cancelToken,
   }) async {
+    // 每次检测都先回收上一次更新留下的安装包，避免缓存目录越积越多。
+    await clearCachedPackages();
     final api = await _checkViaApi(cancelToken);
     if (api.sawNotFound) {
       return const UpdateCheckFailure('暂未找到可用的发布版本');
@@ -296,6 +299,13 @@ final class UpdateService {
     CancelToken? cancelToken,
   }) async {
     Object? lastError;
+    // 只保留本次要下载的文件：清掉历史版本与上次中断留下的半成品，
+    // 保证缓存目录里始终最多只有一个安装包。
+    final dir = Directory(p.dirname(targetPath));
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+    await dir.create(recursive: true);
     for (final prefix in AppConfig.githubProxies) {
       final file = File(targetPath);
       try {
@@ -330,15 +340,65 @@ final class UpdateService {
     );
   }
 
+  /// 应用私有缓存目录下的更新包存放目录。
+  static Future<Directory> _updateDir() async {
+    final base = await getTemporaryDirectory();
+    return Directory(p.join(base.path, AppConfig.updateCacheDirName));
+  }
+
   /// 更新包缓存路径；目录不存在时创建。
   static Future<String> cachePathFor(String version) async {
-    final base = await getTemporaryDirectory();
-    final dir = Directory(p.join(base.path, AppConfig.updateCacheDirName));
+    final dir = await _updateDir();
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
     return p.join(dir.path, 'kabao-$version.apk');
   }
+
+  /// 回收整个更新包缓存目录（含历史版本与中断的半成品）。
+  ///
+  /// 安装包只在「下载完成 → 交给系统安装器」这段时间内需要，之后即可删除。
+  /// 清理失败不应影响更新流程本身。
+  static Future<void> clearCachedPackages() async {
+    try {
+      final dir = await _updateDir();
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    } catch (_) {
+      // 缓存目录不可用时忽略：它本来就可以被系统随时回收。
+    }
+  }
+
+  /// 启动时回收「已经装上」的更新包。
+  ///
+  /// 只有在当前安装版本不低于缓存包版本时才删除，所以仍在等待用户确认安装的
+  /// 包不会被误删（那种情况下系统安装器可能还需要读取它）。
+  static Future<void> pruneInstalledPackages() async {
+    try {
+      final installed = (await PackageInfo.fromPlatform()).version;
+      final dir = await _updateDir();
+      if (!await dir.exists()) {
+        return;
+      }
+      await for (final entity in dir.list()) {
+        if (entity is! File) {
+          continue;
+        }
+        final version = _versionFromFileName(p.basename(entity.path));
+        if (version != null && compareVersions(installed, version) >= 0) {
+          await entity.delete();
+        }
+      }
+    } catch (_) {
+      // 启动期清理是尽力而为，失败不影响应用运行。
+    }
+  }
+
+  static final RegExp _cacheFilePattern = RegExp(r'^kabao-(.+)\.apk$');
+
+  static String? _versionFromFileName(String name) =>
+      _cacheFilePattern.firstMatch(name)?.group(1);
 }
 
 /// 去掉 Release 标签的 `v` 前缀。

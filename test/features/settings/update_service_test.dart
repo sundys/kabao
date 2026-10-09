@@ -1,13 +1,20 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kabao/features/settings/logic/update_service.dart';
 
+UpdateService serviceWith(FakeAdapter adapter) {
+  final dio = Dio(BaseOptions(validateStatus: (s) => s != null && s < 500));
+  dio.httpClientAdapter = adapter;
+  return UpdateService(dio: dio);
+}
+
 /// 按 URL 返回预置响应，用于验证代理依次重试的行为。
-final class _FakeAdapter implements HttpClientAdapter {
-  _FakeAdapter(this.responses, {this.locationHeaders = const {}});
+final class FakeAdapter implements HttpClientAdapter {
+  FakeAdapter(this.responses, {this.locationHeaders = const {}});
 
   /// 匹配规则：URL 前缀命中即返回对应响应。
   final Map<String, (int status, String body)> responses;
@@ -124,14 +131,8 @@ void main() {
   });
 
   group('检测更新', () {
-    UpdateService serviceWith(_FakeAdapter adapter) {
-      final dio = Dio(BaseOptions(validateStatus: (s) => s != null && s < 500));
-      dio.httpClientAdapter = adapter;
-      return UpdateService(dio: dio);
-    }
-
     test('直连可用时不走代理', () async {
-      final adapter = _FakeAdapter({
+      final adapter = FakeAdapter({
         'https://api.github.com/': (200, releaseJson(tag: 'v1.0.20')),
         'https://ghfast.top/': (200, releaseJson(tag: 'v9.9.9')),
       });
@@ -143,7 +144,7 @@ void main() {
     });
 
     test('直连失败后依次尝试代理直到成功', () async {
-      final adapter = _FakeAdapter({
+      final adapter = FakeAdapter({
         'https://ghfast.top/': (200, releaseJson(tag: 'v1.0.20')),
       });
       final result = await serviceWith(adapter).check(currentVersion: '1.0.19');
@@ -154,7 +155,7 @@ void main() {
     });
 
     test('版本不比当前新时判定为已是最新', () async {
-      final adapter = _FakeAdapter({
+      final adapter = FakeAdapter({
         'https://api.github.com/': (200, releaseJson(tag: 'v1.0.19')),
       });
       final result = await serviceWith(adapter).check(currentVersion: '1.0.19');
@@ -163,7 +164,7 @@ void main() {
     });
 
     test('全部通道不可用时给出可重试的失败结果', () async {
-      final adapter = _FakeAdapter(const {});
+      final adapter = FakeAdapter(const {});
       final result = await serviceWith(adapter).check(currentVersion: '1.0.19');
 
       expect(result, isA<UpdateCheckFailure>());
@@ -171,7 +172,7 @@ void main() {
     });
 
     test('仓库没有 Release 时不再尝试其它代理', () async {
-      final adapter = _FakeAdapter({
+      final adapter = FakeAdapter({
         'https://api.github.com/': (404, ''),
         'https://ghfast.top/': (200, releaseJson(tag: 'v1.0.20')),
       });
@@ -184,7 +185,7 @@ void main() {
     test('API 被墙时退回发布页，并按发布约定推导 APK 地址', () async {
       const pageUrl =
           'https://ghfast.top/https://github.com/sundys/kabao/releases/latest';
-      final adapter = _FakeAdapter(
+      final adapter = FakeAdapter(
         {pageUrl: (302, '')},
         locationHeaders: {
           pageUrl: 'https://github.com/sundys/kabao/releases/tag/v1.0.20',
@@ -205,6 +206,51 @@ void main() {
         'https://github.com/sundys/kabao/releases/download/v1.0.20/'
         'kabao-1.0.20-armeabi-v7a.apk',
       );
+    });
+  });
+
+  group('更新包清理', () {
+    late Directory dir;
+
+    setUp(() async {
+      dir = await Directory.systemTemp.createTemp('kabao-update-clean');
+    });
+
+    tearDown(() async {
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    });
+
+    Future<void> writeFile(String name, String content) => File(
+      '${dir.path}${Platform.pathSeparator}$name',
+    ).writeAsString(content);
+
+    test('下载前清掉历史版本与半成品，只保留本次安装包', () async {
+      await writeFile('kabao-1.0.18.apk', 'old');
+      await writeFile('kabao-1.0.19.apk', 'previous');
+      await writeFile('kabao-1.0.20.apk', 'partial');
+
+      final adapter = FakeAdapter({
+        'https://api.github.com/': (200, 'APK-BYTES'),
+      });
+      final service = serviceWith(adapter);
+      final target = '${dir.path}${Platform.pathSeparator}kabao-1.0.20.apk';
+
+      final downloaded = await service.download(
+        const ReleaseAsset(
+          name: 'kabao-1.0.20-arm64-v8a.apk',
+          downloadUrl: 'https://api.github.com/asset',
+        ),
+        targetPath: target,
+      );
+
+      final remaining = await dir
+          .list()
+          .map((e) => e.path.split(Platform.pathSeparator).last)
+          .toList();
+      expect(remaining, ['kabao-1.0.20.apk'], reason: '不应残留其它版本的安装包');
+      expect(await downloaded.readAsString(), 'APK-BYTES');
     });
   });
 }

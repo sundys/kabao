@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/logic/auth_controller.dart';
 import '../features/notifications/logic/reminder_coordinator.dart';
 import '../features/settings/logic/lock_timeout_controller.dart';
+import '../features/settings/logic/update_service.dart';
 import '../shared/services/clipboard_service.dart';
 import '../shared/services/local_notification_service.dart';
 import 'providers/repositories_providers.dart';
@@ -28,6 +29,8 @@ class _KabaoAppState extends ConsumerState<KabaoApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // 回收已经安装完成的更新包，避免安装包一直留在缓存目录里。
+    unawaited(UpdateService.pruneInstalledPackages());
   }
 
   @override
