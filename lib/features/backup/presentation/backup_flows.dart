@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -24,9 +26,14 @@ final class BackupFlows {
 
   static String _pad(int v) => v.toString().padLeft(2, '0');
 
-  /// Export flow: choose a backup password → pick location (SAF via
-  /// FilePicker) → encrypt and write atomically-ish (single write after full
-  /// encryption completes).
+  /// Export flow: choose a backup password → encrypt into memory → pick
+  /// location (SAF via FilePicker) → write the finished ciphertext in one go.
+  ///
+  /// The encrypted payload is produced **before** the save dialog opens, so a
+  /// failure never leaves a half-written file. `bytes` must be passed to
+  /// [FilePicker.platform.saveFile]: on Android/iOS the picker writes through
+  /// SAF and throws [ArgumentError] when bytes are null, and the returned
+  /// "path" is a document URI that `dart:io` cannot open.
   static Future<void> export(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
     final password = await _askPassword(
@@ -35,14 +42,6 @@ final class BackupFlows {
       hint: '备份将使用该密码独立加密，与主密码互不影响',
     );
     if (password == null || !context.mounted) {
-      return;
-    }
-    final savePath = await FilePicker.platform.saveFile(
-      fileName: _defaultFileName,
-      type: FileType.custom,
-      allowedExtensions: ['kabao'],
-    );
-    if (savePath == null || !context.mounted) {
       return;
     }
     try {
@@ -62,13 +61,31 @@ final class BackupFlows {
         ],
         documents: await documentRepo?.listAll() ?? const [],
       );
-      // 先在本地完成加密，再写入目标位置。
+      // 先在内存中完成加密，再让用户选择保存位置。
       final contents = await BackupCodec.encode(
         snapshot: snapshot,
         password: password,
         now: DateTime.now(),
       );
-      await File(savePath).writeAsString(contents, flush: true);
+      final bytes = Uint8List.fromList(utf8.encode(contents));
+      if (!context.mounted) {
+        return;
+      }
+      final savePath = await FilePicker.platform.saveFile(
+        fileName: _defaultFileName,
+        type: FileType.custom,
+        allowedExtensions: ['kabao'],
+        // Android/iOS 由插件写入字节流，缺了它 saveFile 会直接抛
+        // ArgumentError，保存对话框根本不会弹出。
+        bytes: bytes,
+      );
+      if (savePath == null || !context.mounted) {
+        return;
+      }
+      // Android/iOS 的 SAF 已在插件侧落盘；桌面端需要自己写一次。
+      if (!Platform.isAndroid && !Platform.isIOS) {
+        await File(savePath).writeAsBytes(bytes, flush: true);
+      }
       messenger.showSnackBar(const SnackBar(content: Text('备份已导出')));
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text('导出失败，请重试')));
