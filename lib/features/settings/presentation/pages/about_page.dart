@@ -49,26 +49,77 @@ class AboutPage extends ConsumerWidget {
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
-          ListTile(
-            leading: const Icon(Icons.code),
-            title: const Text('开源主页'),
-            subtitle: const Text(AppConfig.githubHomepage),
-            onTap: () => launchUrl(Uri.parse(AppConfig.githubHomepage)),
+          _AboutTile(
+            icon: Icons.code,
+            title: '开源主页',
+            link: true,
+            onTap: () => _openUrl(context, AppConfig.githubHomepage),
           ),
-          ListTile(
-            leading: const Icon(Icons.system_update_alt_rounded),
-            title: const Text('检测更新'),
-            subtitle: const Text('检查 GitHub 上的最新版本并安装'),
+          _AboutTile(
+            icon: Icons.system_update_alt_rounded,
+            title: '检测更新',
             onTap: () => checkForUpdates(context),
           ),
-          ListTile(
-            leading: const Icon(Icons.table_view_outlined),
-            title: const Text('CSV 批量导入模板下载'),
-            subtitle: const Text('银行卡和证件 CSV / XLS 模板'),
-            onTap: () => launchUrl(Uri.parse(AppConfig.importTemplatesUrl)),
+          _AboutTile(
+            icon: Icons.table_view_outlined,
+            title: 'CSV 批量导入模板下载',
+            link: true,
+            onTap: () => _openUrl(context, AppConfig.importTemplatesUrl),
           ),
         ],
       ),
+    );
+  }
+
+  /// 打开外部链接；失败时给出提示，避免点击后毫无反应。
+  Future<void> _openUrl(BuildContext context, String url) async {
+    final messenger = ScaffoldMessenger.of(context);
+    var opened = false;
+    try {
+      opened = await launchUrl(Uri.parse(url));
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('无法打开链接，请检查是否已安装浏览器')),
+      );
+    }
+  }
+}
+
+/// 关于页的一行入口。[link] 为真时标题按超链接样式显示（外部跳转）。
+class _AboutTile extends StatelessWidget {
+  const _AboutTile({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.link = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+  final bool link;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return ListTile(
+      leading: Icon(icon, color: link ? scheme.primary : null),
+      title: Text(
+        title,
+        style: link
+            ? theme.textTheme.bodyLarge?.copyWith(
+                color: scheme.primary,
+                fontWeight: FontWeight.w500,
+                decoration: TextDecoration.underline,
+                decorationColor: scheme.primary.withValues(alpha: .5),
+              )
+            : null,
+      ),
+      onTap: onTap,
     );
   }
 }
