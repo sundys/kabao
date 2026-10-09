@@ -32,8 +32,10 @@ final class WalletSearchResult {
   final Object routeValue;
 }
 
-final walletSearchResultsProvider =
-    FutureProvider.autoDispose<List<WalletSearchResult>>((ref) async {
+/// 钱包搜索数据源。[categoryId] 为空时覆盖全部分类（首页入口）；
+/// 非空时只加载该分类下的记录（分类页入口，不做全局搜索）。
+final walletSearchResultsProvider = FutureProvider.autoDispose
+    .family<List<WalletSearchResult>, String?>((ref, categoryId) async {
       final categoryRepository = ref.watch(categoryRepositoryProvider);
       final cardRepository = ref.watch(cardRepositoryProvider);
       final documentRepository = ref.watch(documentRepositoryProvider);
@@ -47,11 +49,15 @@ final walletSearchResultsProvider =
       final categoryById = {
         for (final category in categories) category.id: category,
       };
-      final cards = [
-        ...await cardRepository.listByType(CardType.debit),
-        ...await cardRepository.listByType(CardType.credit),
-      ];
-      final documents = await documentRepository.listAll();
+      final cards = categoryId == null
+          ? [
+              ...await cardRepository.listByType(CardType.debit),
+              ...await cardRepository.listByType(CardType.credit),
+            ]
+          : await cardRepository.listByCategory(categoryId);
+      final documents = categoryId == null
+          ? await documentRepository.listAll()
+          : await documentRepository.listByCategory(categoryId);
 
       return [
         for (final card in cards)
@@ -84,8 +90,13 @@ final walletSearchResultsProvider =
       ];
     });
 
+/// 本地搜索面板。[categoryId] 为空时搜索全部分类；非空时只搜索该分类，
+/// 首页入口保持全局搜索，分类页入口不越界。
 class WalletSearchSheet extends ConsumerStatefulWidget {
-  const WalletSearchSheet({super.key});
+  const WalletSearchSheet({super.key, this.categoryId});
+
+  /// 非空时把搜索范围限定在该分类内。
+  final String? categoryId;
 
   @override
   ConsumerState<WalletSearchSheet> createState() => _WalletSearchSheetState();
@@ -93,6 +104,8 @@ class WalletSearchSheet extends ConsumerStatefulWidget {
 
 class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
   String _query = '';
+
+  bool get _isScoped => widget.categoryId != null;
 
   bool _matches(WalletSearchResult result) {
     final query = _query.trim().toLowerCase();
@@ -106,7 +119,9 @@ class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final resultsAsync = ref.watch(walletSearchResultsProvider);
+    final resultsAsync = ref.watch(
+      walletSearchResultsProvider(widget.categoryId),
+    );
     final theme = Theme.of(context);
     return SafeArea(
       child: Padding(
@@ -124,7 +139,7 @@ class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
                   autofocus: true,
                   onChanged: (value) => setState(() => _query = value),
                   decoration: InputDecoration(
-                    hintText: '搜索姓名、卡号或分类',
+                    hintText: _isScoped ? '搜索本分类内的记录' : '搜索姓名、卡号或分类',
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -174,7 +189,10 @@ class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
                             style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           subtitle: Text(
-                            '${result.categoryName} · ${result.maskedNumber}',
+                            // 分类内搜索时结果必然同属当前分类，无需重复分类名。
+                            _isScoped
+                                ? result.maskedNumber
+                                : '${result.categoryName} · ${result.maskedNumber}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

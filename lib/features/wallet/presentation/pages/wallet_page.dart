@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/models.dart';
 import '../widgets/category_list_view.dart';
-import '../widgets/wallet_search_sheet.dart';
+import '../widgets/wallet_search_button.dart';
 
 /// Wallet screen with a centered, swipeable three-tab selector.
 class WalletPage extends ConsumerStatefulWidget {
@@ -132,25 +132,9 @@ class _WalletPageState extends ConsumerState<WalletPage> {
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(
-                padding: const EdgeInsets.only(right: 14, bottom: 18),
-                child: GestureDetector(
-                  key: const Key('wallet-search-button'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20),
-                      ),
-                    ),
-                    builder: (_) => const WalletSearchSheet(),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.search, size: 30),
-                  ),
+                padding: walletSearchButtonMargin,
+                child: const WalletSearchButton(
+                  key: Key('wallet-search-button'),
                 ),
               ),
             ),

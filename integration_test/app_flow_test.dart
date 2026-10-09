@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:kabao/features/wallet/presentation/widgets/wallet_search_button.dart';
+import 'package:kabao/features/wallet/presentation/widgets/wallet_search_sheet.dart';
 
 import 'integration_test_helpers.dart';
 
@@ -51,7 +53,7 @@ void main() {
     // ---- 进入分类并添加卡片 ----
     await tester.tap(find.text('工商银行'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('添加卡片'));
+    await tester.tap(find.byTooltip('添加卡片'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const Key('card-number-field')),
@@ -82,7 +84,28 @@ void main() {
     await tester.pump();
     expect(find.text('已复制'), findsOneWidget);
 
-    // 搜索结果也必须能进入同一详情页。
+    // 分类页的搜索入口只搜索当前分类，结果同样能进入详情页。
+    await tester.tap(find.byType(WalletSearchButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('wallet-search-field')),
+      '6222',
+    );
+    await tester.pumpAndSettle();
+    final scopedResult = find.descendant(
+      of: find.byType(WalletSearchSheet),
+      matching: find.textContaining('6222 **** **** 5678'),
+    );
+    expect(scopedResult, findsOneWidget);
+    await tester.tap(scopedResult);
+    await tester.pumpAndSettle();
+    expect(find.text('卡片详情'), findsOneWidget);
+
+    // 返回首页：全局搜索入口保持全局作用域，同样能定位该卡片。
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pageBack();
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('wallet-search-button')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -90,7 +113,7 @@ void main() {
       '6222',
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('6222 **** **** 5678'));
+    await tester.tap(find.text('工商银行 · 6222 **** **** 5678'));
     await tester.pumpAndSettle();
     expect(find.text('卡片详情'), findsOneWidget);
   });

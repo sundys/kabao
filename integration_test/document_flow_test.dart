@@ -46,7 +46,7 @@ void main() {
     // ---- 进入分类并添加证件 ----
     await tester.tap(find.text('身份证'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('添加证件'));
+    await tester.tap(find.byTooltip('添加证件'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextFormField).first, '张三');
