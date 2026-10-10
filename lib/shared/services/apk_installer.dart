@@ -5,17 +5,19 @@ import 'package:flutter/services.dart';
 /// Android 侧「安装未知应用」与 APK 安装的封装。
 ///
 /// 仅 Android 可用；其它平台一律返回不支持，调用方据此降级为打开浏览器下载。
-final class ApkInstaller {
-  const ApkInstaller._();
+/// 以实例方法暴露，便于在测试中替换掉平台实现。
+class ApkInstaller {
+  const ApkInstaller();
 
   static const MethodChannel _channel = MethodChannel(
     'com.sundys.kabao/apk_installer',
   );
 
-  static bool get isSupported => Platform.isAndroid;
+  /// 当前平台是否支持应用内安装。
+  bool get isSupported => Platform.isAndroid;
 
   /// 是否已获得「安装未知应用」授权（Android 8.0 以下恒为 true）。
-  static Future<bool> canInstallPackages() async {
+  Future<bool> canInstallPackages() async {
     if (!isSupported) {
       return false;
     }
@@ -24,7 +26,7 @@ final class ApkInstaller {
 
   /// 跳转到系统设置申请安装权限。返回时不会给出结果，调用方需在应用恢复
   /// 前台后重新调用 [canInstallPackages] 确认。
-  static Future<void> openInstallPermissionSettings() async {
+  Future<void> openInstallPermissionSettings() async {
     if (!isSupported) {
       return;
     }
@@ -32,7 +34,7 @@ final class ApkInstaller {
   }
 
   /// 调用系统安装器安装已下载到本地缓存的 APK。
-  static Future<bool> install(String apkPath) async {
+  Future<bool> install(String apkPath) async {
     if (!isSupported) {
       return false;
     }
@@ -41,7 +43,7 @@ final class ApkInstaller {
   }
 
   /// 设备支持的 ABI 列表，顺序即优先级（与 Build.SUPPORTED_ABIS 一致）。
-  static Future<List<String>> supportedAbis() async {
+  Future<List<String>> supportedAbis() async {
     if (!isSupported) {
       return const [];
     }

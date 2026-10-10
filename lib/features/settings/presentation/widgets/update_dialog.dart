@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -145,7 +146,28 @@ class _MessageDialog extends StatelessWidget {
   }
 }
 
-enum _UpdateStage { ready, downloading, permission, installing, failed }
+enum _UpdateStage {
+  /// 尚未下载，等待用户点击「立即更新」。
+  ready,
+
+  /// 正在下载安装包。
+  downloading,
+
+  /// 已下载完成，等待用户在系统设置里授予「安装未知应用」。
+  permission,
+
+  /// 正在调起系统安装器。
+  installing,
+
+  /// 安装器已调起，等待用户在系统界面完成安装。
+  installPending,
+
+  /// 从安装器返回但版本没有变化（取消或安装失败），可直接重装。
+  reinstall,
+
+  /// 流程失败，可重试或前往发布页。
+  failed,
+}
 
 /// 更新窗口：展示新版本与更新说明，下载时显示进度，完成后调用系统安装器。
 class UpdateDialog extends StatefulWidget {
@@ -153,10 +175,16 @@ class UpdateDialog extends StatefulWidget {
     super.key,
     required this.info,
     required this.currentVersion,
+    this.service,
+    this.installer = const ApkInstaller(),
   });
 
   final UpdateInfo info;
   final String currentVersion;
+
+  /// 供测试注入替身；为空时使用真实实现。
+  final UpdateService? service;
+  final ApkInstaller installer;
 
   @override
   State<UpdateDialog> createState() => _UpdateDialogState();
@@ -166,6 +194,8 @@ class _UpdateDialogState extends State<UpdateDialog>
     with WidgetsBindingObserver {
   _UpdateStage _stage = _UpdateStage.ready;
   String? _error;
+
+  /// 已下载完成的安装包路径。不为空时「重新安装」直接复用，不会再下载一次。
   String? _apkPath;
 
   int _received = 0;
@@ -177,8 +207,11 @@ class _UpdateDialogState extends State<UpdateDialog>
   /// 已跳转系统设置申请安装权限，等待用户返回。
   bool _awaitingPermission = false;
 
+  /// 已调起系统安装器，等待用户返回。
+  bool _awaitingInstall = false;
+
   CancelToken? _cancelToken;
-  final UpdateService _service = UpdateService();
+  late final UpdateService _service = widget.service ?? UpdateService();
 
   @override
   void initState() {
@@ -195,9 +228,17 @@ class _UpdateDialogState extends State<UpdateDialog>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _awaitingPermission) {
+    if (state != AppLifecycleState.resumed) {
+      return;
+    }
+    if (_awaitingPermission) {
       _awaitingPermission = false;
       unawaited(_continueAfterPermission());
+      return;
+    }
+    if (_awaitingInstall) {
+      _awaitingInstall = false;
+      unawaited(_afterInstaller());
     }
   }
 
@@ -207,6 +248,7 @@ class _UpdateDialogState extends State<UpdateDialog>
     setState(() {
       _stage = _UpdateStage.downloading;
       _error = null;
+      _apkPath = null;
       _received = 0;
       _total = 0;
       _bytesPerSecond = 0;
@@ -259,41 +301,96 @@ class _UpdateDialogState extends State<UpdateDialog>
   }
 
   Future<ReleaseAsset?> _resolveAsset() async {
-    final abis = await ApkInstaller.supportedAbis();
+    final abis = await widget.installer.supportedAbis();
     return widget.info.apkForAbis(abis);
   }
 
+  /// 本地是否已有可以直接安装的安装包：平台支持安装，且安装包还在缓存里。
+  bool get _hasInstallablePackage =>
+      _apkPath != null && widget.installer.isSupported;
+
+  /// 主按钮动作：已经有安装包就直接安装，否则先下载。
+  Future<void> _primaryAction() =>
+      _hasInstallablePackage ? _continueAfterPermission() : _start();
+
   /// 安装前确认「安装未知应用」权限；缺失时跳转设置，待用户返回后继续。
   Future<void> _continueAfterPermission() async {
-    final path = _apkPath;
-    if (path == null) {
+    if (_apkPath == null) {
       return;
     }
-    if (!ApkInstaller.isSupported) {
+    if (!widget.installer.isSupported) {
       _fail('当前平台不支持直接安装，请前往发布页下载。');
       return;
     }
-    final allowed = await ApkInstaller.canInstallPackages();
+    final allowed = await widget.installer.canInstallPackages();
     if (!mounted) {
       return;
     }
     if (!allowed) {
       setState(() => _stage = _UpdateStage.permission);
       _awaitingPermission = true;
-      await ApkInstaller.openInstallPermissionSettings();
+      await widget.installer.openInstallPermissionSettings();
+      return;
+    }
+    await _launchInstaller();
+  }
+
+  /// 调起系统安装器安装已经下载好的安装包，这里不会再发起下载。
+  Future<void> _launchInstaller() async {
+    final path = _apkPath;
+    if (path == null) {
+      return;
+    }
+    if (!await File(path).exists()) {
+      // 安装包已被系统清理，只能重新下载。
+      await _start();
+      return;
+    }
+    if (!mounted) {
       return;
     }
     setState(() => _stage = _UpdateStage.installing);
-    final launched = await ApkInstaller.install(path);
+    bool launched;
+    try {
+      launched = await widget.installer.install(path);
+    } catch (_) {
+      launched = false;
+    }
     if (!mounted) {
       return;
     }
     if (!launched) {
-      _fail('无法调起系统安装器，请前往发布页手动下载。');
+      _fail('无法调起系统安装器，请点击「重新安装」重试。');
       return;
     }
-    // 系统安装界面已经弹出，关闭本窗口避免遮挡。
-    Navigator.of(context).pop();
+    // 不关闭窗口：安装成功时本进程会被系统结束，安装失败或被取消时用户会回到
+    // 这里，直接「重新安装」即可，不必重新下载。
+    setState(() => _stage = _UpdateStage.installPending);
+    _awaitingInstall = true;
+  }
+
+  /// 用户从系统安装器返回。
+  ///
+  /// 版本已经提升说明安装成功；否则停在窗口里，让用户直接重新安装缓存中的安装包。
+  Future<void> _afterInstaller() async {
+    if (!mounted || _stage != _UpdateStage.installPending) {
+      return;
+    }
+    var installed = false;
+    try {
+      final version = (await PackageInfo.fromPlatform()).version;
+      installed = compareVersions(version, widget.info.version) >= 0;
+    } catch (_) {
+      // 读不到版本时按「尚未安装」处理，让用户可以直接重试。
+    }
+    if (!mounted || _stage != _UpdateStage.installPending) {
+      return;
+    }
+    if (installed) {
+      Navigator.of(context).pop();
+      return;
+    }
+    setState(() => _stage = _UpdateStage.reinstall);
   }
 
   void _fail(String message) {
@@ -433,21 +530,9 @@ class _UpdateDialogState extends State<UpdateDialog>
           ],
         );
       case _UpdateStage.permission:
-        return Row(
-          children: [
-            Icon(
-              Icons.info_outline,
-              size: 18,
-              color: theme.colorScheme.primary,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                '请在弹出的系统设置中允许「安装未知应用」，返回后将继续安装。',
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
-          ],
+        return const _HintRow(
+          icon: Icons.info_outline,
+          text: '请在弹出的系统设置中允许「安装未知应用」，返回后将继续安装。',
         );
       case _UpdateStage.installing:
         return const Row(
@@ -461,6 +546,16 @@ class _UpdateDialogState extends State<UpdateDialog>
             SizedBox(width: 12),
             Text('正在调起系统安装器…'),
           ],
+        );
+      case _UpdateStage.installPending:
+        return const _HintRow(
+          icon: Icons.download_done_rounded,
+          text: '安装包已下载完成，请在系统安装界面完成安装。',
+        );
+      case _UpdateStage.reinstall:
+        return const _HintRow(
+          icon: Icons.refresh_rounded,
+          text: '安装未完成，可直接重新安装，无需重新下载。',
         );
       case _UpdateStage.failed:
         return Container(
@@ -486,6 +581,25 @@ class _UpdateDialogState extends State<UpdateDialog>
     }
   }
 
+  /// 主按钮文案：只要本地还留着可安装的安装包，就不需要再下载一遍。
+  String get _primaryLabel {
+    switch (_stage) {
+      case _UpdateStage.downloading:
+        return '下载中…';
+      case _UpdateStage.installing:
+        return '安装中…';
+      case _UpdateStage.permission:
+        return '我已允许';
+      case _UpdateStage.ready:
+        return _hasInstallablePackage ? '重新安装' : '立即更新';
+      case _UpdateStage.installPending:
+      case _UpdateStage.reinstall:
+        return '重新安装';
+      case _UpdateStage.failed:
+        return _hasInstallablePackage ? '重新安装' : '重试';
+    }
+  }
+
   List<Widget> _buildActions() {
     final busy =
         _stage == _UpdateStage.downloading || _stage == _UpdateStage.installing;
@@ -494,27 +608,20 @@ class _UpdateDialogState extends State<UpdateDialog>
         onPressed: busy ? null : () => Navigator.of(context).pop(),
         child: Text(_stage == _UpdateStage.permission ? '稍后再说' : '稍后'),
       ),
-      if (_stage == _UpdateStage.failed)
+      // 只有本地没有可用安装包时，才需要用户自己去发布页下载。
+      if (_stage == _UpdateStage.failed && !_hasInstallablePackage)
         FilledButton(
-          onPressed: () async {
-            await launchUrl(Uri.parse(AppConfig.latestReleaseUrl));
-          },
+          onPressed: () => launchUrl(Uri.parse(AppConfig.latestReleaseUrl)),
           child: const Text('前往发布页'),
         ),
       FilledButton(
         onPressed: busy
             ? null
             : switch (_stage) {
-                _UpdateStage.failed => _start,
                 _UpdateStage.permission => _continueAfterPermission,
-                _ => _start,
+                _ => _primaryAction,
               },
-        child: Text(switch (_stage) {
-          _UpdateStage.failed => '重试',
-          _UpdateStage.permission => '我已允许',
-          _UpdateStage.downloading => '下载中…',
-          _ => '立即更新',
-        }),
+        child: Text(_primaryLabel),
       ),
     ];
   }
@@ -524,6 +631,26 @@ class _UpdateDialogState extends State<UpdateDialog>
 
   static String _formatSpeed(double bytesPerSecond) =>
       '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(2)} MB';
+}
+
+/// 状态区的一行提示：图标 + 说明。
+class _HintRow extends StatelessWidget {
+  const _HintRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: theme.colorScheme.primary),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
+      ],
+    );
+  }
 }
 
 /// 「1.0.18 → 1.0.19」样式的版本标签。
