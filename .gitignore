@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+.claude/settings.local.json
 
 # IntelliJ related
 *.iml
