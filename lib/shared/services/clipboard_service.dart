@@ -56,8 +56,13 @@ abstract final class ClipboardService {
     }
   }
 
-  /// Call from app lifecycle when leaving foreground.
+  /// Call from app lifecycle when leaving foreground. 清理是尽力而为：
+  /// 平台通道不可用（或系统拒绝）时不能影响生命周期处理。
   static Future<void> clear() async {
-    await Clipboard.setData(const ClipboardData(text: ''));
+    try {
+      await Clipboard.setData(const ClipboardData(text: ''));
+    } catch (_) {
+      // Ignored by design.
+    }
   }
 }
