@@ -10,6 +10,7 @@ import '../features/settings/logic/lock_timeout_controller.dart';
 import '../features/settings/logic/update_service.dart';
 import '../shared/services/clipboard_service.dart';
 import '../shared/services/local_notification_service.dart';
+import 'localization.dart';
 import 'providers/repositories_providers.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -125,6 +126,9 @@ class _KabaoAppState extends ConsumerState<KabaoApp>
     return MaterialApp.router(
       title: '卡包',
       debugShowCheckedModeBanner: false,
+      locale: appLocale,
+      supportedLocales: appSupportedLocales,
+      localizationsDelegates: appLocalizationsDelegates,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: themeMode,

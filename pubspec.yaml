@@ -31,6 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # 内置组件（文本选择菜单、日期选择器、对话框语义标签等）的中文文案。
+  flutter_localizations:
+    sdk: flutter
+
   cupertino_icons: ^1.0.8
 
   flutter_riverpod: ^3.0.3
