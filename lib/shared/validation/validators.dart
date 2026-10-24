@@ -141,6 +141,19 @@ final class Validators {
     }
     return null;
   }
+
+  /// 额度为可选数字（元），允许输入时带千位分隔符，最多 8 位。
+  static String? creditLimit(String? raw) {
+    final value = raw?.trim() ?? '';
+    if (value.isEmpty) {
+      return null;
+    }
+    final digits = value.replaceAll(',', '');
+    if (!RegExp(r'^\d{1,8}$').hasMatch(digits)) {
+      return '额度应为 1-8 位数字（元）';
+    }
+    return null;
+  }
 }
 
 abstract final class CardRecordNoteLimit {

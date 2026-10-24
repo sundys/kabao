@@ -74,39 +74,32 @@ class CategoryListView extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider(cardType));
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          categoriesAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, _) => const Center(child: Text('加载失败，请重试')),
-            data: (categories) {
-              if (categories.isEmpty) {
-                return _EmptyPlaceholder(cardType: cardType);
-              }
-              return RefreshIndicator(
-                onRefresh: () async =>
-                    ref.refresh(categoriesProvider(cardType).future),
-                child: GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 1.85,
-                  ),
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final category = categories[index];
-                    return _CategoryTile(
-                      category: category,
-                      cardType: cardType,
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ],
+      body: categoriesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => const Center(child: Text('加载失败，请重试')),
+        data: (categories) {
+          if (categories.isEmpty) {
+            return _EmptyPlaceholder(cardType: cardType);
+          }
+          return RefreshIndicator(
+            onRefresh: () async =>
+                ref.refresh(categoriesProvider(cardType).future),
+            child: GridView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.85,
+              ),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                return _CategoryTile(category: category, cardType: cardType);
+              },
+            ),
+          );
+        },
       ),
     );
   }

@@ -6,9 +6,22 @@ import '../../../../shared/utils/card_number_utils.dart';
 import '../../../../shared/utils/category_colors.dart';
 import '../../../../shared/utils/text_sanitizer.dart';
 import '../../../../app/providers/repositories_providers.dart';
+import '../../domain/document.dart';
 import '../../domain/models.dart';
 
 enum WalletSearchKind { bankCard, document }
+
+/// 搜索范围：首页不限；分类页限定 [categoryId]；类型页限定 [cardType]。
+/// 两个都为空表示搜索全部卡片与证件。
+typedef WalletSearchScope = ({String? categoryId, CardType? cardType});
+
+const WalletSearchScope walletSearchAll = (categoryId: null, cardType: null);
+
+WalletSearchScope walletSearchInCategory(String categoryId) =>
+    (categoryId: categoryId, cardType: null);
+
+WalletSearchScope walletSearchInType(CardType cardType) =>
+    (categoryId: null, cardType: cardType);
 
 final class WalletSearchResult {
   const WalletSearchResult({
@@ -32,10 +45,11 @@ final class WalletSearchResult {
   final Object routeValue;
 }
 
-/// 钱包搜索数据源。[categoryId] 为空时覆盖全部分类（首页入口）；
-/// 非空时只加载该分类下的记录（分类页入口，不做全局搜索）。
+/// 钱包搜索数据源。[scope.categoryId] 非空时只加载该分类下的记录（分类页
+/// 入口，不做全局搜索）；[scope.cardType] 非空时只加载该类型的记录（类型页
+/// 入口）；两者都为空时覆盖全部卡片与证件（首页入口）。
 final walletSearchResultsProvider = FutureProvider.autoDispose
-    .family<List<WalletSearchResult>, String?>((ref, categoryId) async {
+    .family<List<WalletSearchResult>, WalletSearchScope>((ref, scope) async {
       final categoryRepository = ref.watch(categoryRepositoryProvider);
       final cardRepository = ref.watch(cardRepositoryProvider);
       final documentRepository = ref.watch(documentRepositoryProvider);
@@ -49,15 +63,24 @@ final walletSearchResultsProvider = FutureProvider.autoDispose
       final categoryById = {
         for (final category in categories) category.id: category,
       };
-      final cards = categoryId == null
-          ? [
-              ...await cardRepository.listByType(CardType.debit),
-              ...await cardRepository.listByType(CardType.credit),
-            ]
-          : await cardRepository.listByCategory(categoryId);
-      final documents = categoryId == null
-          ? await documentRepository.listAll()
-          : await documentRepository.listByCategory(categoryId);
+      final categoryId = scope.categoryId;
+      final type = scope.cardType;
+      final List<CardRecord> cards;
+      final List<DocumentRecord> documents;
+      if (categoryId != null) {
+        cards = await cardRepository.listByCategory(categoryId);
+        documents = await documentRepository.listByCategory(categoryId);
+      } else {
+        cards = [
+          if (type == null || type == CardType.debit)
+            ...await cardRepository.listByType(CardType.debit),
+          if (type == null || type == CardType.credit)
+            ...await cardRepository.listByType(CardType.credit),
+        ];
+        documents = type == null || type == CardType.document
+            ? await documentRepository.listAll()
+            : const [];
+      }
 
       return [
         for (final card in cards)
@@ -129,7 +152,13 @@ class _WalletSearchSheetState extends ConsumerState<WalletSearchSheet> {
     // 未输入关键词时不加载任何记录：搜索面板打开后只显示提示，
     // 不暴露默认的卡片列表。
     final resultsAsync = _hasQuery
-        ? ref.watch(walletSearchResultsProvider(widget.categoryId))
+        ? ref.watch(
+            walletSearchResultsProvider(
+              widget.categoryId == null
+                  ? walletSearchAll
+                  : walletSearchInCategory(widget.categoryId!),
+            ),
+          )
         : null;
     return SafeArea(
       child: Padding(

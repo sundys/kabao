@@ -23,6 +23,12 @@ class CardDetailPage extends ConsumerWidget {
       if (holderName != null) ('姓名', holderName),
       if (TextSanitizer.clean(card.cardKind) != null)
         ('卡种', TextSanitizer.clean(card.cardKind)!),
+      if (card.creditLimit != null)
+        (
+          '额度',
+          '¥${_formatAmount(card.creditLimit!)}'
+              '${card.includeInTotal ? '' : '（不计入总额）'}',
+        ),
       ('卡号', grouped),
       if (card.expiryMonth != null && card.expiryYear != null)
         (
@@ -116,6 +122,12 @@ class CardDetailPage extends ConsumerWidget {
       ),
     );
   }
+
+  /// 千位分隔，如 50000 → 50,000。
+  static String _formatAmount(int value) => value.toString().replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (m) => ',',
+  );
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(

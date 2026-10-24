@@ -5,6 +5,7 @@ import 'package:kabao/app/app.dart';
 
 export 'package:flutter/material.dart'
     show
+        Checkbox,
         CheckboxListTile,
         Icons,
         Key,
@@ -12,6 +13,8 @@ export 'package:flutter/material.dart'
         TextField,
         TextFormField,
         Text;
+
+export 'dart:ui' show Offset;
 
 /// 测试用主密码（仅用于集成测试环境）。
 const String testMasterPassword = 'integration-test-pass';

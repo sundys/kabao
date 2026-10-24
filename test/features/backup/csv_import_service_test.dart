@@ -70,6 +70,37 @@ void main() {
     expect(invalid.errors.single.field, 'card_kind');
   });
 
+  test('额度与计入总额列可导入，默认计入', () {
+    final draft = CsvImportService(categories: const [], database: db).prepare(
+      kind: CsvImportKind.cards,
+      contents:
+          'record_type,category_type,category_name,credit_limit,count_in_total,card_number\n'
+          'card,credit,工商银行,"50,000",false,6222111111111111\n'
+          'card,credit,建设银行,12000,,6222111111111112\n'
+          'card,credit,农业银行,,,6222111111111113\n',
+    );
+    expect(draft.isValid, isTrue);
+    final cards = draft.snapshot.cards;
+    // 千位分隔符被去掉；空计入总额列取默认 true；额度空为 null。
+    expect(cards[0].creditLimit, 50000);
+    expect(cards[0].includeInTotal, isFalse);
+    expect(cards[1].creditLimit, 12000);
+    expect(cards[1].includeInTotal, isTrue);
+    expect(cards[2].creditLimit, isNull);
+    expect(cards[2].includeInTotal, isTrue);
+  });
+
+  test('额度列非法值被拒绝', () {
+    final draft = CsvImportService(categories: const [], database: db).prepare(
+      kind: CsvImportKind.cards,
+      contents:
+          'record_type,category_type,category_name,credit_limit,card_number\n'
+          'card,credit,工商银行,-500,6222111111111111\n',
+    );
+    expect(draft.isValid, isFalse);
+    expect(draft.errors.single.field, 'credit_limit');
+  });
+
   test('银行卡 CSV 清理不可见字符且不把空姓名当作内容', () {
     final draft = CsvImportService(categories: const [], database: db).prepare(
       kind: CsvImportKind.cards,

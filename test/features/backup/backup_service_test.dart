@@ -62,6 +62,8 @@ void main() {
     expect(result.categoriesAdded, 1);
     expect(result.cardsAdded, 1);
     expect((await categories.listByType(CardType.debit)).single.id, 'a');
+    // 导入完成的 Snackbar 直接拼接该结果，不能出现 instance of ...。
+    expect(result.toString(), '新增分类 1、更新分类 0、新增记录 1、更新记录 0');
   });
 
   test('同 ID 冲突时保留更新时间较新者', () async {

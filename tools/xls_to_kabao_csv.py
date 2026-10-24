@@ -28,7 +28,8 @@ except ImportError as exc:  # pragma: no cover - exercised by CLI users
 
 CARD_HEADERS = [
     "记录类型（可选）", "分类类型", "分类名称", "分类ID（可选）",
-    "记录ID（可选）", "持有人姓名（可选）", "卡种（可选）", "卡号", "有效期（可选）",
+    "记录ID（可选）", "持有人姓名（可选）", "卡种（可选）", "额度（可选）",
+    "计入总额（可选）", "卡号", "有效期（可选）",
     "CVV（可选）", "U盾到期日（可选）", "备注（可选）", "创建时间（可选）",
     "更新时间（可选）",
 ]
@@ -47,6 +48,8 @@ ALIASES = {
     "记录ID": "id", "id": "id",
     "持有人姓名": "holder_name", "holder_name": "holder_name", "姓名": "holder_name",
     "卡种": "card_kind", "card_kind": "card_kind",
+    "额度": "credit_limit", "credit_limit": "credit_limit",
+    "计入总额": "count_in_total", "count_in_total": "count_in_total",
     "卡号": "card_number", "card_number": "card_number",
     "有效期": "expiry", "expiry": "expiry",
     "CVV": "cvv", "cvv": "cvv",
@@ -160,6 +163,29 @@ def normalize_bool(value: Any) -> str:
     return ""
 
 
+def _plain_number(value: Any) -> str:
+    """额度列：去掉千位分隔符，仅保留纯数字（空值返回空串）。"""
+    raw = text_value(value)
+    if not raw:
+        return ""
+    digits = raw.replace(",", "").replace("，", "")
+    if not re.fullmatch(r"\d{1,8}", digits):
+        raise ValueError(f"额度应为 1-8 位数字（元），当前为：{raw}")
+    return digits
+
+
+def _normalize_count_in_total(value: Any) -> str:
+    """计入总额列：空值返回空串（导入端默认 true），其余归一为 true/false。"""
+    raw = text_value(value).lower()
+    if not raw:
+        return ""
+    if raw in {"true", "1", "yes", "y", "是", "计入"}:
+        return "true"
+    if raw in {"false", "0", "no", "n", "否", "不计入"}:
+        return "false"
+    raise ValueError(f"计入总额只能填写 true/false，当前为：{raw}")
+
+
 def convert(input_path: Path, output_path: Path, kind: str, sheet_name: str | None) -> int:
     book = xlrd.open_workbook(str(input_path), formatting_info=False)
     try:
@@ -196,6 +222,8 @@ def convert(input_path: Path, output_path: Path, kind: str, sheet_name: str | No
             out["记录ID（可选）"] = text_value(source.get("id"))
             out["持有人姓名（可选）"] = text_value(source.get("holder_name"))
             out["卡种（可选）"] = text_value(source.get("card_kind"))
+            out["额度（可选）"] = _plain_number(source.get("credit_limit"))
+            out["计入总额（可选）"] = _normalize_count_in_total(source.get("count_in_total"))
             out["创建时间（可选）"] = normalize_date(source.get("created_at"), book, sheet, row_idx, canonical.get("created_at", -1), "iso")
             out["更新时间（可选）"] = normalize_date(source.get("updated_at"), book, sheet, row_idx, canonical.get("updated_at", -1), "iso")
             if kind == "cards":

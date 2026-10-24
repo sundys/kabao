@@ -16,6 +16,7 @@ import '../features/wallet/domain/models.dart';
 import '../features/wallet/presentation/pages/card_detail_page.dart';
 import '../features/wallet/presentation/pages/category_detail_page.dart';
 import '../features/wallet/presentation/pages/document_detail_page.dart';
+import '../features/wallet/presentation/pages/wallet_home_page.dart';
 import '../features/wallet/presentation/pages/wallet_page.dart';
 import '../features/wallet/presentation/pages/wallet_shell.dart';
 import '../features/wallet/presentation/widgets/card_edit_page.dart';
@@ -119,6 +120,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.about,
         builder: (context, state) => const AboutPage(),
       ),
+      GoRoute(
+        path: '/wallet/type/:type',
+        builder: (context, state) {
+          final type = CardType.values.firstWhere(
+            (t) => t.name == state.pathParameters['type'],
+            orElse: () => CardType.debit,
+          );
+          return WalletTypePage(cardType: type);
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => WalletScaffold(shell: shell),
         branches: [
@@ -127,7 +138,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.home,
                 name: 'wallet',
-                builder: (context, state) => const WalletPage(),
+                builder: (context, state) => const WalletHomePage(),
               ),
             ],
           ),

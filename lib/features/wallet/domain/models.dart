@@ -80,6 +80,8 @@ class CardRecord {
     required this.cardNumber,
     this.holderName,
     this.cardKind,
+    this.creditLimit,
+    this.includeInTotal = true,
     this.sortOrder = 0,
     this.expiryMonth,
     this.expiryYear,
@@ -96,6 +98,9 @@ class CardRecord {
   /// 卡种（如“标准卡/白金卡”），可选自由文本。
   static const int maxCardKindLength = 20;
 
+  /// 额度最多 8 位数字（元）。
+  static const int maxCreditLimitDigits = 8;
+
   final String id;
   final String categoryId;
   final CardType cardType;
@@ -108,6 +113,12 @@ class CardRecord {
 
   /// 卡种（可选），如“标准卡”“白金卡”。
   final String? cardKind;
+
+  /// 额度（元，可选）；信用卡授信额度，也可用于借记卡记录其他限额。
+  final int? creditLimit;
+
+  /// 该卡的额度是否计入总授信额度；默认 true。
+  final bool includeInTotal;
 
   /// 手动排序序号；0 表示未手动排序。
   final int sortOrder;
@@ -137,6 +148,8 @@ class CardRecord {
     cardNumber: cardNumber,
     holderName: holderName,
     cardKind: cardKind,
+    creditLimit: creditLimit,
+    includeInTotal: includeInTotal,
     sortOrder: value,
     expiryMonth: expiryMonth,
     expiryYear: expiryYear,
@@ -151,6 +164,8 @@ class CardRecord {
   String payloadJson() => jsonEncode({
     'holderName': holderName,
     'cardKind': cardKind,
+    'creditLimit': creditLimit,
+    'includeInTotal': includeInTotal,
     'cardNumber': cardNumber,
     'sortOrder': sortOrder,
     'expiryMonth': expiryMonth,
@@ -175,6 +190,8 @@ class CardRecord {
       cardNumber: payload['cardNumber']! as String,
       holderName: payload['holderName'] as String?,
       cardKind: payload['cardKind'] as String?,
+      creditLimit: (payload['creditLimit'] as num?)?.toInt(),
+      includeInTotal: payload['includeInTotal'] as bool? ?? true,
       sortOrder: (metadata['sort_order'] as num?)?.toInt() ?? 0,
       expiryMonth: (payload['expiryMonth'] as num?)?.toInt(),
       expiryYear: (payload['expiryYear'] as num?)?.toInt(),

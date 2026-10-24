@@ -6,6 +6,7 @@ import '../../notifications/logic/reminder_coordinator.dart';
 import '../../../shared/services/local_notification_service.dart';
 import '../domain/document.dart';
 import 'categories_controller.dart';
+import 'wallet_summary_providers.dart';
 
 /// Loads and mutates certificate documents of one sub-category.
 final documentsProvider = AsyncNotifierProvider.family
@@ -34,6 +35,7 @@ class DocumentsController extends AsyncNotifier<List<DocumentRecord>> {
     await LocalNotificationService.instance.cancelRemindersFor(document.id);
     await repo.save(document);
     ref.invalidate(categoryCardCountProvider(categoryId));
+    ref.read(vaultRevisionProvider.notifier).bump();
     // Validity-date edits reuse dedupe keys; rebuild the encrypted snapshots.
     await ref.read(notificationRepositoryProvider)?.purgeByCard(document.id);
     ref.invalidateSelf();
@@ -66,6 +68,7 @@ class DocumentsController extends AsyncNotifier<List<DocumentRecord>> {
     if (removed > 0) {
       ref.invalidateSelf();
       ref.invalidate(categoryCardCountProvider(categoryId));
+      ref.read(vaultRevisionProvider.notifier).bump();
       final notifications = ref.read(notificationRepositoryProvider);
       await notifications?.deleteByCard(id);
       await LocalNotificationService.instance.initialize();

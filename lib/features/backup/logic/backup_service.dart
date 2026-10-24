@@ -17,6 +17,12 @@ final class ImportResult {
   final int categoriesUpdated;
   final int cardsAdded;
   final int cardsUpdated;
+
+  /// 统计包含银行卡与证件记录；数字之外不携带任何敏感信息。
+  @override
+  String toString() =>
+      '新增分类 $categoriesAdded、更新分类 $categoriesUpdated、'
+      '新增记录 $cardsAdded、更新记录 $cardsUpdated';
 }
 
 final class BackupService {

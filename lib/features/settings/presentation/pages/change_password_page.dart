@@ -20,7 +20,7 @@ class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   final _confirmController = TextEditingController();
   bool _submitting = false;
 
-  static const int minPasswordLength = 8;
+  static const int minPasswordLength = 6;
 
   @override
   void dispose() {

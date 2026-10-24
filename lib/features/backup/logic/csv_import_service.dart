@@ -205,6 +205,12 @@ final class CsvImportService {
     if (Validators.cardKind(cardKind) != null) {
       throw _RowError('card_kind', '卡种最多 20 字');
     }
+    final creditLimit = _parseCreditLimit(row['credit_limit']);
+    final includeInTotal = _parseBool(
+      row['count_in_total'],
+      'count_in_total',
+      defaultValue: true,
+    );
     final note = _optional(row['note']);
     if (Validators.note(note) != null) throw _RowError('note', '备注最多 500 字');
     final id = _id(row['id'], now);
@@ -216,6 +222,8 @@ final class CsvImportService {
       cardNumber: number,
       holderName: _optional(row['holder_name']),
       cardKind: cardKind,
+      creditLimit: creditLimit,
+      includeInTotal: includeInTotal,
       expiryMonth: expiry?.$1,
       expiryYear: expiry?.$2,
       cvv: cvv,
@@ -375,6 +383,30 @@ final class CsvImportService {
     return DateTime(int.parse(p[0]), int.parse(p[1]), int.parse(p[2]));
   }
 
+  /// 额度：可选，去掉千位分隔符后必须为 1-8 位数字。
+  int? _parseCreditLimit(String? raw) {
+    final value = _optional(raw);
+    if (value == null) return null;
+    final digits = value.replaceAll(',', '');
+    if (!RegExp(r'^\d{1,8}$').hasMatch(digits)) {
+      throw _RowError('credit_limit', '额度应为 1-8 位数字（元）');
+    }
+    return int.parse(digits);
+  }
+
+  /// 布尔列：空值返回默认值，其余只接受 true/false 及常见中英文写法。
+  bool _parseBool(String? raw, String field, {required bool defaultValue}) {
+    final value = (_optional(raw) ?? '').toLowerCase();
+    if (value.isEmpty) return defaultValue;
+    if (value == 'true' || value == '1' || value == '是' || value == '计入') {
+      return true;
+    }
+    if (value == 'false' || value == '0' || value == '否' || value == '不计入') {
+      return false;
+    }
+    throw _RowError(field, '只能填写 true/false');
+  }
+
   DateTime _timestamp(String? raw, String field, DateTime fallback) {
     final value = _optional(raw);
     if (value == null) return fallback;
@@ -409,6 +441,8 @@ final class CsvImportService {
     'id',
     'holder_name',
     'card_kind',
+    'credit_limit',
+    'count_in_total',
     'card_number',
     'expiry',
     'cvv',
@@ -453,6 +487,8 @@ final class _CsvParser {
     '记录ID': 'id',
     '持有人姓名': 'holder_name',
     '卡种': 'card_kind',
+    '额度': 'credit_limit',
+    '计入总额': 'count_in_total',
     '卡号': 'card_number',
     '有效期': 'expiry',
     'CVV': 'cvv',

@@ -70,13 +70,6 @@ final class WebDavConfig {
   String encoded() => jsonEncode(toJson());
 }
 
-final class WebDavCredentials {
-  const WebDavCredentials({required this.username, required this.password});
-
-  final String username;
-  final String password;
-}
-
 /// Storage-backed profile: non-secret config plus separately stored secret.
 abstract interface class WebDavProfileStore {
   Future<WebDavConfig?> readConfig();

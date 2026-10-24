@@ -19,7 +19,7 @@ class _FirstSetupPageState extends ConsumerState<FirstSetupPage> {
   bool _obscurePassword = true;
   bool _submitting = false;
 
-  static const int minPasswordLength = 8;
+  static const int minPasswordLength = 6;
 
   @override
   void dispose() {

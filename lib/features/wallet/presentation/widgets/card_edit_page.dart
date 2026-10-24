@@ -33,6 +33,8 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
   bool _saving = false;
   late final TextEditingController _nameController;
   late final TextEditingController _cardKindController;
+  late final TextEditingController _creditLimitController;
+  bool _includeInTotal = true;
 
   @override
   void initState() {
@@ -40,6 +42,10 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
     final card = widget.card;
     _nameController = TextEditingController(text: card.holderName ?? '');
     _cardKindController = TextEditingController(text: card.cardKind ?? '');
+    _creditLimitController = TextEditingController(
+      text: card.creditLimit == null ? '' : card.creditLimit.toString(),
+    );
+    _includeInTotal = card.includeInTotal;
     _numberController = TextEditingController(
       text: CardNumberValidation.groupForDisplay(card.cardNumber),
     );
@@ -64,6 +70,7 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
   void dispose() {
     _nameController.dispose();
     _cardKindController.dispose();
+    _creditLimitController.dispose();
     _numberController.dispose();
     _expiryController.dispose();
     _cvvController.dispose();
@@ -108,6 +115,10 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
         cardKind: _cardKindController.text.trim().isEmpty
             ? null
             : _cardKindController.text.trim(),
+        creditLimit: _creditLimitController.text.trim().isEmpty
+            ? null
+            : int.parse(_creditLimitController.text.trim().replaceAll(',', '')),
+        includeInTotal: _includeInTotal,
         expiryMonth: month,
         expiryYear: year,
         cvv: _cvvController.text.trim().isEmpty
@@ -267,6 +278,59 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
               validator: Validators.uShieldDate,
             ),
             const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: TextFormField(
+                    key: const Key('card-credit-limit-field'),
+                    controller: _creditLimitController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp('[0-9,]')),
+                    ],
+                    maxLength: 12, // 8 位数字 + 千位分隔符
+                    decoration: const InputDecoration(
+                      labelText: '额度（元，可选）',
+                      hintText: '如：50000',
+                      counterText: '',
+                    ),
+                    validator: Validators.creditLimit,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    // 与输入框内容底部对齐（输入框 helper 文案占位差异）。
+                    padding: const EdgeInsets.only(top: 4),
+                    child: InkWell(
+                      key: const Key('card-include-in-total-toggle'),
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () =>
+                          setState(() => _includeInTotal = !_includeInTotal),
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: '计入总额',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Checkbox(
+                            value: _includeInTotal,
+                            onChanged: (v) =>
+                                setState(() => _includeInTotal = v ?? false),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               key: const Key('card-note-field'),
               controller: _noteController,
@@ -280,6 +344,7 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
             ),
             const SizedBox(height: 24),
             FilledButton(
+              key: const Key('card-save'),
               onPressed: _saving ? null : _save,
               child: _saving
                   ? const SizedBox(

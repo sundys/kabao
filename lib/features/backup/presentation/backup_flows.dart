@@ -12,6 +12,7 @@ import '../../wallet/domain/models.dart';
 import '../../wallet/logic/cards_controller.dart' as wallet_cards;
 import '../../wallet/logic/categories_controller.dart' as wallet_categories;
 import '../../wallet/logic/documents_controller.dart' as wallet_documents;
+import '../../wallet/logic/wallet_summary_providers.dart';
 import '../logic/backup_codec.dart';
 import '../logic/backup_service.dart';
 import '../logic/csv_import_service.dart';
@@ -155,6 +156,7 @@ final class BackupFlows {
       ref.invalidate(wallet_categories.categoriesProvider);
       ref.invalidate(wallet_cards.cardsProvider);
       ref.invalidate(wallet_documents.documentsProvider);
+      ref.read(vaultRevisionProvider.notifier).bump();
       messenger.showSnackBar(
         SnackBar(content: Text('导入完成：${result.toString()}')),
       );
@@ -201,6 +203,7 @@ final class BackupFlows {
       ref.invalidate(wallet_categories.categoriesProvider);
       ref.invalidate(wallet_cards.cardsProvider);
       ref.invalidate(wallet_documents.documentsProvider);
+      ref.read(vaultRevisionProvider.notifier).bump();
       await ref.read(reminderCoordinatorProvider).recompute();
       messenger.showSnackBar(
         SnackBar(
@@ -258,7 +261,7 @@ final class BackupFlows {
                 obscureText: true,
                 autofocus: true,
                 validator: (v) =>
-                    (v == null || v.length < 8) ? '至少 8 个字符' : null,
+                    (v == null || v.length < 6) ? '至少 6 个字符' : null,
               ),
               if (confirmField)
                 TextFormField(

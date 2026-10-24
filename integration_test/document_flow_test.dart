@@ -33,9 +33,10 @@ void main() {
     await tester.tap(find.text('解锁'));
     await tester.pumpAndSettle();
 
-    // ---- 切到证件卡标签并创建分类 ----
-    await tester.tap(find.text('证件卡'));
+    // ---- 从首页进入证件卡分类页（点击证件卡圆形统计）----
+    await tester.tap(find.byKey(const Key('count-circle-document')));
     await tester.pumpAndSettle();
+    expect(find.text('还没有证件分类'), findsOneWidget);
     await tester.tap(find.byKey(const Key('add-category-button')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('category-name-field')), '身份证');

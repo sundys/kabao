@@ -131,13 +131,13 @@ void main() {
     final container = containerWithRepositories();
 
     final scoped = await container.read(
-      walletSearchResultsProvider(target.id).future,
+      walletSearchResultsProvider(walletSearchInCategory(target.id)).future,
     );
     expect(scoped.map((result) => result.recordId), ['card-target']);
 
-    // 首页入口不传分类，保持全局搜索。
+    // 首页入口不限范围，保持全局搜索。
     final global = await container.read(
-      walletSearchResultsProvider(null).future,
+      walletSearchResultsProvider(walletSearchAll).future,
     );
     expect(global.map((result) => result.recordId).toSet(), {
       'card-target',
