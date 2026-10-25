@@ -73,7 +73,10 @@ Future<List<AppNotification>> recomputeReminders({
                 notification,
                 now: at,
               );
-              if (armed == true && existingNotification != null) {
+              // 只在首次成功编排时落库，避免每次回前台都重写全部提醒行。
+              if (armed == true &&
+                  existingNotification != null &&
+                  existingNotification.systemScheduledAt == null) {
                 await notifications.markSystemScheduled(
                   existingNotification.id,
                 );

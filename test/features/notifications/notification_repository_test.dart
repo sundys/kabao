@@ -211,6 +211,42 @@ void main() {
     expect(card.id, 'card-1');
   });
 
+  test('重复重算重新编排闹钟但不改写已挂载状态时间戳', () async {
+    await seedCard();
+    final gateway = RecordingGateway();
+    final localNotifications = LocalNotificationService(gateway: gateway);
+    await localNotifications.initialize();
+    final now = DateTime(2026, 1, 1);
+
+    await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: now,
+      localNotifications: localNotifications,
+    );
+    final firstMarks = {
+      for (final reminder in await notifications.listAll())
+        reminder.dedupeKey: reminder.systemScheduledAt,
+    };
+    expect(firstMarks.values.every((v) => v != null), isTrue);
+
+    await recomputeReminders(
+      cards: cards,
+      categories: categories,
+      notifications: notifications,
+      now: now,
+      localNotifications: localNotifications,
+    );
+    final secondMarks = {
+      for (final reminder in await notifications.listAll())
+        reminder.dedupeKey: reminder.systemScheduledAt,
+    };
+    // 闹钟会重新编排（幂等替换），但已挂载状态只应写入一次。
+    expect(gateway.scheduled.length, greaterThan(firstMarks.length));
+    expect(secondMarks, firstMarks);
+  });
+
   test('已到提醒首次展示后记录状态，重复重算不会重复展示', () async {
     await seedCard();
     final gateway = RecordingGateway();

@@ -157,6 +157,8 @@ final class BackupFlows {
       ref.invalidate(wallet_cards.cardsProvider);
       ref.invalidate(wallet_documents.documentsProvider);
       ref.read(vaultRevisionProvider.notifier).bump();
+      // 与 CSV 导入保持一致：导入的记录立即参与提醒计算与系统闹钟编排。
+      await ref.read(reminderCoordinatorProvider).recompute();
       messenger.showSnackBar(
         SnackBar(content: Text('导入完成：${result.toString()}')),
       );
