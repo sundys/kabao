@@ -247,93 +247,128 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
-          const _SectionHeader(title: '外观'),
-          ListTile(
-            leading: const Icon(Icons.palette_outlined),
-            title: const Text('主题颜色'),
-            subtitle: Text(_themeLabel(ref)),
-            onTap: () => _pickTheme(context, ref),
+          const _SectionLabel('外观'),
+          _SettingsCard(
+            children: [
+              _SettingsTile(
+                icon: Icons.palette_outlined,
+                title: '主题颜色',
+                subtitle: _themeLabel(ref),
+                onTap: () => _pickTheme(context, ref),
+              ),
+            ],
           ),
-          const _SettingsDivider(),
-          const _SectionHeader(title: '安全'),
-          ListTile(
-            leading: const Icon(Icons.password_outlined),
-            title: const Text('修改主密码'),
-            onTap: () => context.push(AppRoutes.changePassword),
+          const _SectionLabel('安全'),
+          _SettingsCard(
+            children: [
+              _SettingsTile(
+                icon: Icons.password_outlined,
+                title: '修改主密码',
+                subtitle: '重新派生密钥并迁移加密数据',
+                accent: theme.colorScheme.tertiary,
+                onTap: () => context.push(AppRoutes.changePassword),
+              ),
+              _SettingsSwitchTile(
+                icon: Icons.fingerprint,
+                title: '生物识别登录',
+                subtitle: _biometricsSupported == false
+                    ? '当前设备不支持'
+                    : '使用指纹快速解锁',
+                accent: theme.colorScheme.tertiary,
+                value: biometricEnabled,
+                onChanged: _biometricsSupported == true
+                    ? _toggleBiometric
+                    : null,
+              ),
+              _SettingsTile(
+                icon: Icons.timer_outlined,
+                title: '超时时间',
+                subtitle: lockTimeoutSubtitle,
+                accent: theme.colorScheme.tertiary,
+                onTap: () => _pickLockTimeout(context, ref),
+              ),
+              _SettingsTile(
+                icon: Icons.notifications_outlined,
+                title: '系统通知',
+                subtitle: '管理到期提醒在 Android 通知栏的显示权限',
+                accent: theme.colorScheme.tertiary,
+                onTap: () async {
+                  await LocalNotificationService.instance.initialize();
+                  await LocalNotificationService.instance.openSettings();
+                },
+              ),
+            ],
           ),
-          SwitchListTile(
-            secondary: const Icon(Icons.fingerprint),
-            title: const Text('生物识别登录'),
-            subtitle: Text(
-              _biometricsSupported == false ? '当前设备不支持' : '使用指纹快速解锁',
-            ),
-            value: biometricEnabled,
-            onChanged: _biometricsSupported == true ? _toggleBiometric : null,
+          const _SectionLabel('数据'),
+          _SettingsCard(
+            children: [
+              _SettingsTile(
+                icon: Icons.file_download_outlined,
+                title: '导入备份',
+                subtitle: '从加密的 .kabao 备份文件恢复',
+                accent: theme.colorScheme.secondary,
+                onTap: () => BackupFlows.import(context, ref),
+              ),
+              _SettingsTile(
+                icon: Icons.file_upload_outlined,
+                title: '导出备份',
+                subtitle: '导出为独立加密的 .kabao 文件',
+                accent: theme.colorScheme.secondary,
+                onTap: () => BackupFlows.export(context, ref),
+              ),
+              _SettingsTile(
+                icon: Icons.table_rows_outlined,
+                title: '导入银行卡 CSV',
+                subtitle: '按标准模板批量导入借记卡或信用卡',
+                accent: theme.colorScheme.secondary,
+                onTap: () =>
+                    BackupFlows.importCsv(context, ref, CsvImportKind.cards),
+              ),
+              _SettingsTile(
+                icon: Icons.badge_outlined,
+                title: '导入证件 CSV',
+                subtitle: '按标准模板批量导入证件卡',
+                accent: theme.colorScheme.secondary,
+                onTap: () => BackupFlows.importCsv(
+                  context,
+                  ref,
+                  CsvImportKind.documents,
+                ),
+              ),
+              _SettingsTile(
+                icon: Icons.cloud_sync_outlined,
+                title: 'WebDAV 备份',
+                subtitle: '服务器地址、测试连接与自动备份策略',
+                accent: theme.colorScheme.secondary,
+                onTap: () => context.push(AppRoutes.webdav),
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.timer_outlined),
-            title: const Text('超时时间'),
-            subtitle: Text(lockTimeoutSubtitle),
-            onTap: () => _pickLockTimeout(context, ref),
+          const _SectionLabel('危险操作'),
+          _SettingsCard(
+            children: [
+              _SettingsTile(
+                icon: Icons.dangerous_outlined,
+                title: '清空全部数据',
+                subtitle: '删除所有卡片、通知与密钥，不可恢复',
+                destructive: true,
+                onTap: _wipeAllData,
+              ),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.notifications_outlined),
-            title: const Text('系统通知'),
-            subtitle: const Text('管理到期提醒在 Android 通知栏的显示权限'),
-            onTap: () async {
-              await LocalNotificationService.instance.initialize();
-              await LocalNotificationService.instance.openSettings();
-            },
-          ),
-          const _SettingsDivider(),
-          const _SectionHeader(title: '数据'),
-          ListTile(
-            leading: const Icon(Icons.file_download_outlined),
-            title: const Text('导入备份'),
-            subtitle: const Text('从加密的 .kabao 备份文件恢复'),
-            onTap: () => BackupFlows.import(context, ref),
-          ),
-          ListTile(
-            leading: const Icon(Icons.file_upload_outlined),
-            title: const Text('导出备份'),
-            subtitle: const Text('导出为独立加密的 .kabao 文件'),
-            onTap: () => BackupFlows.export(context, ref),
-          ),
-          ListTile(
-            leading: const Icon(Icons.table_rows_outlined),
-            title: const Text('导入银行卡 CSV'),
-            subtitle: const Text('按标准模板批量导入借记卡或信用卡'),
-            onTap: () =>
-                BackupFlows.importCsv(context, ref, CsvImportKind.cards),
-          ),
-          ListTile(
-            leading: const Icon(Icons.badge_outlined),
-            title: const Text('导入证件 CSV'),
-            subtitle: const Text('按标准模板批量导入证件卡'),
-            onTap: () =>
-                BackupFlows.importCsv(context, ref, CsvImportKind.documents),
-          ),
-          ListTile(
-            leading: const Icon(Icons.cloud_sync_outlined),
-            title: const Text('WebDAV 备份'),
-            subtitle: const Text('服务器地址、测试连接与自动备份策略'),
-            onTap: () => context.push(AppRoutes.webdav),
-          ),
-          ListTile(
-            leading: const Icon(Icons.dangerous_outlined),
-            iconColor: theme.colorScheme.error,
-            textColor: theme.colorScheme.error,
-            title: const Text('清空全部数据'),
-            subtitle: const Text('删除所有卡片、通知与密钥，不可恢复'),
-            onTap: _wipeAllData,
-          ),
-          const _SettingsDivider(),
-          const _SectionHeader(title: '关于'),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: const Text('关于卡包'),
-            onTap: () => context.push(AppRoutes.about),
+          const _SectionLabel('关于'),
+          _SettingsCard(
+            children: [
+              _SettingsTile(
+                icon: Icons.info_outline,
+                title: '关于卡包',
+                subtitle: '版本信息、开源主页与更新',
+                accent: theme.colorScheme.onSurfaceVariant,
+                onTap: () => context.push(AppRoutes.about),
+              ),
+            ],
           ),
         ],
       ),
@@ -341,39 +376,201 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
+/// 分组小标题：低饱和、加字距，作为卡片组之间的视觉分隔。
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.title);
 
   final String title;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      padding: const EdgeInsets.fromLTRB(6, 20, 6, 8),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
         ),
       ),
     );
   }
 }
 
-/// A low-contrast divider that remains visible without looking like a bright
-/// white rule in either light or dark mode.
-class _SettingsDivider extends StatelessWidget {
-  const _SettingsDivider();
+/// 一组设置项：圆角容器 + 项目间细分隔线，替代原来零散的整行分隔线。
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.children});
+
+  final List<Widget> children;
+
+  /// 与 [_SettingsTile] 的图标块对齐：内容左内边距 14 + 图标 36 + 间距 12。
+  static const double _dividerIndent = 62;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final alpha = theme.brightness == Brightness.dark ? 0.18 : 0.10;
-    return Divider(
-      indent: 16,
-      endIndent: 16,
-      color: theme.colorScheme.onSurface.withValues(alpha: alpha),
-      thickness: 1,
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final dividerColor = scheme.onSurface.withValues(alpha: isDark ? .10 : .07);
+    // 用 Material 而不是带色 Container：ListTile 的水波纹画在最近的 Material
+    // 上，若中间夹一层有色 DecoratedBox，点击反馈会被遮住（Flutter 会断言）。
+    return Material(
+      color: scheme.onSurface.withValues(alpha: isDark ? .05 : .035),
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: scheme.onSurface.withValues(alpha: isDark ? .08 : .05),
+          ),
+        ),
+        child: Column(
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  indent: _dividerIndent,
+                  endIndent: 14,
+                  color: dividerColor,
+                ),
+              children[i],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 带彩色图标底纹的设置项。功能与 [ListTile] 一致，仅统一了视觉与间距。
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+    this.accent,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+
+  /// 图标底纹与图标本身的强调色；默认取主题主色。
+  final Color? accent;
+
+  /// 危险操作：图标、标题与底纹都使用错误色。
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final color = destructive ? scheme.error : (accent ?? scheme.primary);
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      minVerticalPadding: 12,
+      leading: _IconChip(icon: icon, color: color),
+      title: Text(
+        title,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: destructive ? scheme.error : scheme.onSurface,
+        ),
+      ),
+      subtitle: subtitle == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                subtitle!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  height: 1.35,
+                ),
+              ),
+            ),
+      trailing: Icon(
+        Icons.chevron_right_rounded,
+        size: 20,
+        color: scheme.onSurfaceVariant.withValues(alpha: .45),
+      ),
+      onTap: onTap,
+    );
+  }
+}
+
+/// 开关型设置项，图标底纹与 [_SettingsTile] 保持一致。
+class _SettingsSwitchTile extends StatelessWidget {
+  const _SettingsSwitchTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+    this.subtitle,
+    this.onChanged,
+    this.accent,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return SwitchListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      secondary: _IconChip(icon: icon, color: accent ?? scheme.primary),
+      title: Text(
+        title,
+        style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      subtitle: subtitle == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                subtitle!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  height: 1.35,
+                ),
+              ),
+            ),
+      value: value,
+      onChanged: onChanged,
+    );
+  }
+}
+
+/// 36×36 的圆角图标底纹，用低透明度强调色区分不同分组。
+class _IconChip extends StatelessWidget {
+  const _IconChip({required this.icon, required this.color});
+
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .13),
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Icon(icon, size: 20, color: color),
     );
   }
 }
