@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#00000000</color>
+
+    <!-- 启动窗口背景：与 AppTheme 的 colorScheme.surface 保持一致，
+         让系统启动窗口到 Flutter 首帧之间没有颜色跳变。 -->
+    <color name="launch_background">#F7FAF7</color>
 </resources>

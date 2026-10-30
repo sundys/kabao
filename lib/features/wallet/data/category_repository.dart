@@ -51,21 +51,14 @@ final class CategoryRepository {
   }
 
   Future<BankCategory?> getById(String id) async {
-    final json = await _db.getPayload(table, id);
-    if (json == null) {
+    final record = await _db.getRecord(table, id);
+    if (record == null) {
       return null;
     }
-    // Metadata columns are needed for full reconstruction; fetch via list.
-    final records = await _db.listRecords(table);
-    for (final record in records) {
-      if (record.metadata.id == id) {
-        return BankCategory.fromJsonFields(
-          metadata: record.metadata.extra,
-          payloadJson: record.json,
-        );
-      }
-    }
-    return null;
+    return BankCategory.fromJsonFields(
+      metadata: record.metadata.extra,
+      payloadJson: record.json,
+    );
   }
 
   Future<void> save(BankCategory category) => _db.putRecord(

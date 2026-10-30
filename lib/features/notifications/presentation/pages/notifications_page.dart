@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/widgets/confirm_dialog_actions.dart';
 import '../../domain/models.dart';
 import '../../domain/reminder_rules.dart';
 import '../../logic/notifications_provider.dart';
@@ -63,17 +64,12 @@ class NotificationsPage extends ConsumerWidget {
           builder: (dialogContext) => AlertDialog(
             title: const Text('删除通知'),
             content: const Text('删除后无法恢复，确定删除这条通知吗？'),
+            actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
             actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
-                ),
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('删除'),
+              ConfirmDialogActions(
+                confirmLabel: '删除',
+                onCancel: () => Navigator.of(dialogContext).pop(false),
+                onConfirm: () => Navigator.of(dialogContext).pop(true),
               ),
             ],
           ),

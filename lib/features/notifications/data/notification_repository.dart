@@ -64,6 +64,18 @@ final class NotificationRepository {
     return rows.map(AppNotification.fromRow).toList();
   }
 
+  /// Same as [listAll] but scoped to one card/document. Single-record
+  /// recomputation only needs this record's snapshots, so saving a card does
+  /// not decrypt the whole notification table.
+  Future<List<AppNotification>> listByCard(String cardId) async {
+    final rows = await _db.queryWhere(
+      table,
+      where: 'card_id = ?',
+      whereArgs: [cardId],
+    );
+    return rows.map(AppNotification.fromRow).toList();
+  }
+
   Future<int> markSystemScheduled(String id) => _db.updateWhere(
     table,
     {'system_scheduled_at': DateTime.now().millisecondsSinceEpoch},
@@ -85,6 +97,17 @@ final class NotificationRepository {
       table,
       columns: ['dedupe_key'],
       where: 'deleted_at IS NOT NULL',
+    );
+    return rows.map((r) => r['dedupe_key']! as String).toList();
+  }
+
+  /// Dismissed dedupe keys of one record, for single-record recomputation.
+  Future<List<String>> deletedDedupeKeysForCard(String cardId) async {
+    final rows = await _db.queryWhere(
+      table,
+      columns: ['dedupe_key'],
+      where: 'card_id = ? AND deleted_at IS NOT NULL',
+      whereArgs: [cardId],
     );
     return rows.map((r) => r['dedupe_key']! as String).toList();
   }

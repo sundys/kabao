@@ -10,6 +10,7 @@ import '../../../auth/models/auth_state.dart';
 import '../../../backup/presentation/backup_flows.dart';
 import '../../../backup/logic/csv_import_service.dart';
 import '../../../../shared/services/local_notification_service.dart';
+import '../../../../shared/widgets/confirm_dialog_actions.dart';
 import '../../logic/lock_timeout_controller.dart';
 import '../../logic/wipe_service.dart';
 
@@ -174,18 +175,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ],
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () {
+          ConfirmDialogActions(
+            confirmLabel: '确认',
+            destructive: false,
+            onCancel: () => Navigator.of(dialogContext).pop(),
+            onConfirm: () {
               if (formKey.currentState!.validate()) {
                 Navigator.of(dialogContext).pop(controller.text);
               }
             },
-            child: const Text('确认'),
           ),
         ],
       ),

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式下的启动窗口背景：与 AppTheme.dark 的 surface(#101413) 一致。 -->
+    <color name="launch_background">#101413</color>
+</resources>

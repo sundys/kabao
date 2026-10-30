@@ -99,6 +99,7 @@ flutter:
     - assets/icon/unionpay.png
     - assets/icon/chp.png
     - assets/icon/id.png
+    - assets/icon/gh.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -175,6 +175,28 @@ final class EncryptedDatabase {
     return _aead.decrypt(key, Uint8List.fromList(stored));
   }
 
+  /// Reads one record by primary key and decrypts only that payload. Prefer
+  /// this over [listRecords] when the caller already knows the id: it avoids
+  /// decrypting every row of the table.
+  Future<EncryptedRecord?> getRecord(String table, String id) async {
+    final key = await _requireKey();
+    final rows = await _exec.query(
+      table,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    final row = rows.first;
+    final payload = Uint8List.fromList(row['payload']! as List<int>);
+    return EncryptedRecord.fromRow(
+      row,
+      utf8.decode(await _aead.decrypt(key, payload)),
+    );
+  }
+
   Future<List<EncryptedRecord>> listRecords(
     String table, {
     String? where,

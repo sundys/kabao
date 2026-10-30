@@ -37,15 +37,11 @@ final class DocumentRepository {
   }
 
   Future<DocumentRecord?> getById(String id) async {
-    final records = await _db.listRecords(
-      table,
-      where: 'id = ? AND card_type = ?',
-      whereArgs: [id, 'document'],
-    );
-    for (final record in records) {
-      return _tryParse(record.metadata.extra, record.json);
+    final record = await _db.getRecord(table, id);
+    if (record == null) {
+      return null;
     }
-    return null;
+    return _tryParse(record.metadata.extra, record.json);
   }
 
   Future<void> save(DocumentRecord document) => _db.putRecord(

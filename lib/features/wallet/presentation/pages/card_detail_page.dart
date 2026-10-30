@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/services/clipboard_service.dart';
 import '../../../../shared/utils/card_number_utils.dart';
 import '../../../../shared/utils/text_sanitizer.dart';
+import '../../../../shared/widgets/confirm_dialog_actions.dart';
 import '../../domain/models.dart';
 import '../../logic/cards_controller.dart';
 
@@ -135,17 +136,12 @@ class CardDetailPage extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('删除卡片'),
         content: const Text('删除后无法恢复，确定删除这张卡片吗？'),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(dialogContext).colorScheme.error,
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除'),
+          ConfirmDialogActions(
+            confirmLabel: '删除',
+            onCancel: () => Navigator.of(dialogContext).pop(false),
+            onConfirm: () => Navigator.of(dialogContext).pop(true),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../shared/services/clipboard_service.dart';
 import '../../../../shared/utils/document_id_utils.dart';
+import '../../../../shared/widgets/confirm_dialog_actions.dart';
 import '../../domain/document.dart';
 import '../../logic/documents_controller.dart';
 
@@ -104,17 +105,12 @@ class DocumentDetailPage extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('删除证件'),
         content: const Text('删除后无法恢复，确定删除这个证件吗？'),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(dialogContext).colorScheme.error,
-            ),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除'),
+          ConfirmDialogActions(
+            confirmLabel: '删除',
+            onCancel: () => Navigator.of(dialogContext).pop(false),
+            onConfirm: () => Navigator.of(dialogContext).pop(true),
           ),
         ],
       ),

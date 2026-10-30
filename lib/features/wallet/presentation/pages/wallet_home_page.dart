@@ -313,6 +313,8 @@ class _SimulatedCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                // 证件卡中央的国徽标识 + “证件卡包”字样。
+                if (isDocument) const _DocumentEmblem(),
                 Padding(
                   padding: const EdgeInsets.all(18),
                   child: Column(
@@ -400,6 +402,52 @@ class _SimulatedCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 证件卡中央标识：国徽图标 + 下方“证件卡包”。
+/// 图标按卡片高度自适应，文字字号略小于图标高度的一半，避免压到顶部标题与底部信息。
+class _DocumentEmblem extends StatelessWidget {
+  const _DocumentEmblem();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        // 顶部标题行与底部留白各占约 34dp，居中内容避开它们。
+        padding: const EdgeInsets.only(top: 26, bottom: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/icon/gh.png',
+              height: 52,
+              fit: BoxFit.contain,
+              // 资源缺失时不占位，保持卡片布局稳定。
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '证件卡包',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                height: 1.1,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2.5,
+                shadows: [
+                  Shadow(
+                    color: Color(0x99000000),
+                    offset: Offset(0, 1),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

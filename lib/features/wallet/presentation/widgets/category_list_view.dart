@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../shared/utils/category_colors.dart';
 import '../../../../shared/validation/validators.dart';
+import '../../../../shared/widgets/confirm_dialog_actions.dart';
 import '../../domain/models.dart';
 import '../../logic/categories_controller.dart';
 
@@ -127,19 +128,15 @@ class _CategoryTile extends ConsumerWidget {
               ? '「${category.name}」下还有 $count 张卡片，请先删除或移动这些卡片。'
               : '确定删除「${category.name}」吗？此操作不可撤销。',
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+          ConfirmDialogActions(
+            confirmLabel: '删除',
+            // 分类下还有卡片时不可删除，只保留取消。
+            showConfirm: count == 0,
+            onCancel: () => Navigator.of(dialogContext).pop(false),
+            onConfirm: () => Navigator.of(dialogContext).pop(true),
           ),
-          if (count == 0)
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error,
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('删除'),
-            ),
         ],
       ),
     );

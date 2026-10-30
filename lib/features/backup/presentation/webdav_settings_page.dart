@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/repositories_providers.dart';
+import '../../../../shared/widgets/confirm_dialog_actions.dart';
 import '../../wallet/domain/models.dart';
 import '../domain/webdav_config.dart';
 import '../logic/backup_service.dart';
@@ -105,14 +106,13 @@ class _WebDavSettingsPageState extends ConsumerState<WebDavSettingsPage> {
           'HTTP 不加密传输，卡片密文虽仍受备份密码保护，'
           '但服务器地址与账号可能被窃听。仅建议开发环境使用。',
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('我已了解风险'),
+          ConfirmDialogActions(
+            confirmLabel: '我已了解风险',
+            destructive: false,
+            onCancel: () => Navigator.of(dialogContext).pop(false),
+            onConfirm: () => Navigator.of(dialogContext).pop(true),
           ),
         ],
       ),
@@ -249,14 +249,13 @@ class _WebDavSettingsPageState extends ConsumerState<WebDavSettingsPage> {
             '${snapshot.cards.length} 张卡片。\n\n'
             '相同 ID 的记录以更新时间较新者为准，不会删除现有数据。',
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('开始恢复'),
+            ConfirmDialogActions(
+              confirmLabel: '开始恢复',
+              destructive: false,
+              onCancel: () => Navigator.of(dialogContext).pop(false),
+              onConfirm: () => Navigator.of(dialogContext).pop(true),
             ),
           ],
         ),
@@ -396,16 +395,19 @@ class _WebDavSettingsPageState extends ConsumerState<WebDavSettingsPage> {
                         builder: (dialogContext) => AlertDialog(
                           title: const Text('清除 WebDAV 配置'),
                           content: const Text('将删除服务器地址、账号与本机保存的密码。'),
+                          actionsPadding: const EdgeInsets.fromLTRB(
+                            24,
+                            0,
+                            24,
+                            20,
+                          ),
                           actions: [
-                            TextButton(
-                              onPressed: () =>
+                            ConfirmDialogActions(
+                              confirmLabel: '清除',
+                              onCancel: () =>
                                   Navigator.of(dialogContext).pop(false),
-                              child: const Text('取消'),
-                            ),
-                            FilledButton(
-                              onPressed: () =>
+                              onConfirm: () =>
                                   Navigator.of(dialogContext).pop(true),
-                              child: const Text('清除'),
                             ),
                           ],
                         ),

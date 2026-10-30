@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../app/providers/repositories_providers.dart';
+import '../../notifications/data/notification_repository.dart';
 import '../../notifications/logic/reminder_coordinator.dart';
 import '../../../shared/services/local_notification_service.dart';
 import '../domain/models.dart';
@@ -68,9 +71,10 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
     if (repo == null) {
       return false;
     }
-    // Remove alarms before a date edit so stale tiers cannot fire.
-    await LocalNotificationService.instance.initialize();
-    await LocalNotificationService.instance.cancelRemindersFor(card.id);
+    // 先取出后续异步步骤所需的依赖：卡片页可能在后台步骤完成前就被关闭，
+    // 那时 autoDispose 的 ref 已不可用。
+    final notifications = ref.read(notificationRepositoryProvider);
+    final coordinator = ref.read(reminderCoordinatorProvider);
     // 编辑保存时保留已有的手动排序。
     final previous = state.value?.where((c) => c.id == card.id).firstOrNull;
     final merged = previous != null && card.sortOrder == 0
@@ -80,13 +84,33 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
     ref.invalidate(categoryCardCountProvider(categoryId));
     // 首页统计（数量/总授信额度/待办）随之刷新。
     ref.read(vaultRevisionProvider.notifier).bump();
-    // A date edit reuses the same dedupe keys, so discard old snapshots before
-    // recomputation can create reminders for the new deadlines.
-    await ref.read(notificationRepositoryProvider)?.purgeByCard(card.id);
     ref.invalidateSelf();
-    // Reminder tiers may change with the new dates; idempotent recompute.
-    await ref.read(reminderCoordinatorProvider).recompute();
+    // 提醒维护放在返回之后执行：解密通知、重挂系统闹钟都与“保存成功”无关，
+    // 不应让用户在保存按钮上等待。
+    unawaited(_refreshReminders(card.id, notifications, coordinator));
     return true;
+  }
+
+  /// Drops stale alarms and snapshots of one card, then recomputes only that
+  /// card's reminder tiers. Failures stay silent; the next unlock/resume
+  /// recomputes everything anyway.
+  Future<void> _refreshReminders(
+    String cardId,
+    NotificationRepository? notifications,
+    ReminderCoordinator coordinator,
+  ) async {
+    try {
+      final localNotifications = LocalNotificationService.instance;
+      await localNotifications.initialize();
+      // Remove alarms before a date edit so stale tiers cannot fire.
+      await localNotifications.cancelRemindersFor(cardId);
+      // A date edit reuses the same dedupe keys, so discard old snapshots
+      // before recomputation can create reminders for the new deadlines.
+      await notifications?.purgeByCard(cardId);
+      await coordinator.recomputeFor(cardId);
+    } catch (_) {
+      // Retried on the next recompute trigger.
+    }
   }
 
   Future<CardRecord> createDraft(CardType type) {
@@ -108,19 +132,33 @@ class CardsController extends AsyncNotifier<List<CardRecord>> {
     if (repo == null) {
       return false;
     }
+    final notifications = ref.read(notificationRepositoryProvider);
+    final coordinator = ref.read(reminderCoordinatorProvider);
     final removed = await repo.delete(id);
     if (removed > 0) {
       ref.invalidateSelf();
       ref.invalidate(categoryCardCountProvider(categoryId));
       ref.read(vaultRevisionProvider.notifier).bump();
-      // Drop reminders belonging to the deleted card.
-      final notifications = ref.read(notificationRepositoryProvider);
-      await notifications?.deleteByCard(id);
-      await LocalNotificationService.instance.initialize();
-      await LocalNotificationService.instance.cancelRemindersFor(id);
-      await ref.read(reminderCoordinatorProvider).recompute();
+      unawaited(_dropReminders(id, notifications, coordinator));
       return true;
     }
     return false;
+  }
+
+  /// Dismisses the deleted card's in-app reminders and its system alarms.
+  Future<void> _dropReminders(
+    String id,
+    NotificationRepository? notifications,
+    ReminderCoordinator coordinator,
+  ) async {
+    try {
+      await notifications?.deleteByCard(id);
+      final localNotifications = LocalNotificationService.instance;
+      await localNotifications.initialize();
+      await localNotifications.cancelRemindersFor(id);
+      await coordinator.recomputeFor(id);
+    } catch (_) {
+      // Retried on the next recompute trigger.
+    }
   }
 }

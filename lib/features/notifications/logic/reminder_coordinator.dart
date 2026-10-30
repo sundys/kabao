@@ -22,7 +22,14 @@ final class ReminderCoordinator {
 
   final Ref _ref;
 
-  Future<void> recompute() async {
+  Future<void> recompute() => _recompute();
+
+  /// Recomputes only one card/document after a save or delete. Saves stay
+  /// responsive: the pass touches one record instead of decrypting and
+  /// re-arming every reminder in the vault.
+  Future<void> recomputeFor(String recordId) => _recompute(recordId);
+
+  Future<void> _recompute([String? recordId]) async {
     final cards = _ref.read(cardRepositoryProvider);
     final categories = _ref.read(categoryRepositoryProvider);
     final notifications = _ref.read(notificationRepositoryProvider);
@@ -39,6 +46,7 @@ final class ReminderCoordinator {
         notifications: notifications,
         documents: documents,
         localNotifications: localNotifications,
+        onlyRecordId: recordId,
       );
       _ref.invalidate(notificationsProvider);
     } catch (_) {

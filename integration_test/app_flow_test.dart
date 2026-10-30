@@ -52,6 +52,12 @@ void main() {
     expect(find.byKey(const Key('add-category-button')), findsOneWidget);
     await tester.tap(find.byTooltip('返回'));
     await tester.pumpAndSettle();
+    // 仿真卡是 PageView，第二页未滑到之前不会构建，先横向滑动再点击。
+    await tester.drag(
+      find.byKey(const Key('simulated-card-debit')),
+      const Offset(-400, 0),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('simulated-card-credit')));
     await tester.pumpAndSettle();
     expect(find.text('还没有信用卡分类'), findsOneWidget);

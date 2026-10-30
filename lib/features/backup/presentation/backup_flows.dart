@@ -15,6 +15,7 @@ import '../../wallet/logic/documents_controller.dart' as wallet_documents;
 import '../../wallet/logic/wallet_summary_providers.dart';
 import '../logic/backup_codec.dart';
 import '../logic/backup_service.dart';
+import '../../../../shared/widgets/confirm_dialog_actions.dart';
 import '../logic/csv_import_service.dart';
 
 final class BackupFlows {
@@ -304,14 +305,13 @@ final class BackupFlows {
                 '创建时间：${meta.createdAt.toLocal()}'
             .replaceAll(RegExp(r'\.\d+$'), ''),
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('下一步'),
+        ConfirmDialogActions(
+          confirmLabel: '下一步',
+          destructive: false,
+          onCancel: () => Navigator.of(dialogContext).pop(false),
+          onConfirm: () => Navigator.of(dialogContext).pop(true),
         ),
       ],
     ),
@@ -329,14 +329,13 @@ final class BackupFlows {
         '将合并 $categories 个分类、$cards 张卡片。\n\n'
         '相同 ID 的记录以更新时间较新者为准，不会删除现有数据。',
       ),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('取消'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('开始导入'),
+        ConfirmDialogActions(
+          confirmLabel: '开始导入',
+          destructive: false,
+          onCancel: () => Navigator.of(dialogContext).pop(false),
+          onConfirm: () => Navigator.of(dialogContext).pop(true),
         ),
       ],
     ),
@@ -354,14 +353,13 @@ final class BackupFlows {
           'CSV 可能包含敏感信息，导入后只会以加密形式保存。相同 ID 按更新时间较新者合并，\n'
           '不会删除现有数据。',
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('开始导入'),
+          ConfirmDialogActions(
+            confirmLabel: '开始导入',
+            destructive: false,
+            onCancel: () => Navigator.of(dialogContext).pop(false),
+            onConfirm: () => Navigator.of(dialogContext).pop(true),
           ),
         ],
       ),

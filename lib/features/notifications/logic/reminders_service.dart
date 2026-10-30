@@ -13,6 +13,10 @@ import '../../../shared/services/local_notification_service.dart';
 /// Recomputes reminders for every card and certificate document. Idempotent:
 /// existing dedupe keys are never re-inserted, so repeated calls on
 /// startup/resume/card changes are safe and never duplicate notifications.
+///
+/// [onlyRecordId] limits the pass to one card or document. Saving a record
+/// only needs that record's tiers re-evaluated, which keeps the write path
+/// fast regardless of how many records the vault holds.
 Future<List<AppNotification>> recomputeReminders({
   required CardRepository cards,
   CategoryRepository? categories,
@@ -21,16 +25,23 @@ Future<List<AppNotification>> recomputeReminders({
   DateTime? now,
   List<String>? knownDedupeKeys,
   LocalNotificationService? localNotifications,
+  String? onlyRecordId,
 }) async {
   final at = now ?? DateTime.now();
   final systemNotifications = localNotifications;
+  final scoped = onlyRecordId != null;
   final notificationCache = <String, AppNotification>{
-    for (final notification in await notifications.listAll())
+    for (final notification
+        in scoped
+            ? await notifications.listByCard(onlyRecordId)
+            : await notifications.listAll())
       notification.dedupeKey: notification,
   };
   final existing = knownDedupeKeys ?? notificationCache.keys.toList();
   final deleted = systemNotifications == null
       ? const <String>[]
+      : scoped
+      ? await notifications.deletedDedupeKeysForCard(onlyRecordId)
       : await notifications.deletedDedupeKeys();
   final existingSet = Set<String>.from(existing);
   final deletedSet = Set<String>.from(deleted);
@@ -47,11 +58,17 @@ Future<List<AppNotification>> recomputeReminders({
     return categoryCache[categoryId];
   }
 
+  final singleCard = onlyRecordId == null
+      ? null
+      : await cards.getById(onlyRecordId);
   for (final type in CardType.values) {
     if (type == CardType.document) {
       continue; // handled by the document pass below
     }
-    for (final card in await cards.listByType(type)) {
+    final cardsOfType = onlyRecordId == null
+        ? await cards.listByType(type)
+        : [if (singleCard != null && singleCard.cardType == type) singleCard];
+    for (final card in cardsOfType) {
       final category = await categoryFor(card.categoryId);
       for (final plan in plansForCard(
         card,
@@ -127,7 +144,9 @@ Future<List<AppNotification>> recomputeReminders({
   // Certificate documents: three tiers (90/60/30) before the validity end.
   final docs = documents == null
       ? const <DocumentRecord>[]
-      : await documents.listAll();
+      : onlyRecordId == null
+      ? await documents.listAll()
+      : [?await documents.getById(onlyRecordId)];
   for (final doc in docs) {
     final category = await categoryFor(doc.categoryId);
     for (final plan in plansForDocument(

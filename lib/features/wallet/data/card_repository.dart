@@ -59,20 +59,14 @@ final class CardRepository {
   }
 
   Future<CardRecord?> getById(String id) async {
-    final records = await _db.listRecords(
-      table,
-      where: 'id = ? AND card_type != ?',
-      whereArgs: [id, 'document'],
-    );
-    for (final record in records) {
-      if (record.metadata.id == id && _isBankCard(record.metadata.extra)) {
-        return CardRecord.fromJsonFields(
-          metadata: record.metadata.extra,
-          payloadJson: record.json,
-        );
-      }
+    final record = await _db.getRecord(table, id);
+    if (record == null || !_isBankCard(record.metadata.extra)) {
+      return null;
     }
-    return null;
+    return CardRecord.fromJsonFields(
+      metadata: record.metadata.extra,
+      payloadJson: record.json,
+    );
   }
 
   Future<void> save(CardRecord card) => _db.putRecord(
