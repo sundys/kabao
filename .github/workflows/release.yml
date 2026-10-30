@@ -35,8 +35,21 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # 与 CI 相同：sqlite3 的 native asset hook 在国内走 ghfast.top 镜像，
+      # 而 GitHub 托管 runner 直连该镜像会超时。测试不需要预编译库，临时
+      # 改用运行器自带的系统 SQLite，测完立刻还原，避免影响后面的 APK/AAB
+      # 构建（Android 包必须打包自带 SQLite，不能依赖系统库）。
       - name: Run tests
-        run: flutter test
+        run: |
+          cp pubspec.yaml "$RUNNER_TEMP/pubspec.orig.yaml"
+          sed -i 's#^      source: sqlite3$#      source: system#' pubspec.yaml
+          grep -n "source:" pubspec.yaml
+          set +e
+          flutter test
+          status=$?
+          set -e
+          cp "$RUNNER_TEMP/pubspec.orig.yaml" pubspec.yaml
+          exit $status
 
       - name: Restore signing keystore
         env:

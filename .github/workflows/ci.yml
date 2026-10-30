@@ -34,8 +34,22 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      # sqlite3 的 native asset hook 默认从 GitHub Releases 下载预编译库。
+      # pubspec.yaml 为国内网络配了 ghfast.top 镜像，但 GitHub 托管 runner
+      # 直连该镜像会超时（errno 110），导致整个测试步骤失败。
+      # 测试不需要预编译库，临时改用运行器自带的系统 SQLite，测完立刻还原，
+      # 避免影响后面的 APK 构建（Android 包必须自带 SQLite）。
       - name: Run tests
-        run: flutter test --coverage
+        run: |
+          cp pubspec.yaml "$RUNNER_TEMP/pubspec.orig.yaml"
+          sed -i 's#^      source: sqlite3$#      source: system#' pubspec.yaml
+          grep -n "source:" pubspec.yaml
+          set +e
+          flutter test --coverage
+          status=$?
+          set -e
+          cp "$RUNNER_TEMP/pubspec.orig.yaml" pubspec.yaml
+          exit $status
 
       - name: Build debug APK
         run: flutter build apk --debug
