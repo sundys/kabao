@@ -19,6 +19,25 @@ val keystoreProperties = Properties().apply {
     }
 }
 
+/**
+ * key.properties 里的 storeFile 允许两种写法：
+ * - 绝对路径：CI 从 Secrets 还原 keystore 到临时目录后写绝对路径；
+ * - 相对路径：本地测试密钥放在 android/keystore/ 下，相对 android/ 解析。
+ *
+ * 注意 android {} 块内的 file() 相对的是 android/app/，直接用会把
+ * "keystore/local-test.jks" 解析到 android/app/keystore/，因此统一走这里。
+ */
+fun resolveStoreFile(raw: String): File {
+    val candidate = File(raw)
+    return if (candidate.isAbsolute) candidate else rootProject.file(raw)
+}
+
+// 本地测试签名标记：带该标记的构建会在版本名后追加 -local，
+// 避免把本地测试密钥签出的包误当成正式发布包分发（签名不同，无法覆盖升级）。
+val isLocalTestSigning =
+    keystoreProperties["storeFile"] != null &&
+        keystoreProperties.getProperty("localTest") == "true"
+
 android {
     namespace = "com.sundys.kabao"
     compileSdk = flutter.compileSdkVersion
@@ -39,7 +58,12 @@ android {
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        // 本地测试签名时在版本名后加 -local，与正式发布包区分开。
+        versionName = if (isLocalTestSigning) {
+            "${flutter.versionName}-local"
+        } else {
+            flutter.versionName
+        }
     }
 
     buildTypes {
@@ -47,7 +71,9 @@ android {
             val hasReleaseSigning = keystoreProperties["storeFile"] != null
             if (hasReleaseSigning) {
                 signingConfig = signingConfigs.create("release") {
-                    storeFile = file(keystoreProperties["storeFile"] as String)
+                    storeFile = resolveStoreFile(
+                        keystoreProperties["storeFile"] as String,
+                    )
                     storePassword = keystoreProperties["storePassword"] as String
                     keyAlias = keystoreProperties["keyAlias"] as String
                     keyPassword = keystoreProperties["keyPassword"] as String

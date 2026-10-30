@@ -181,13 +181,20 @@ base64 -w0 kabao-release.jks > keystore-base64.txt   # macOS 用 base64 -i kabao
 本地签名调试：创建 `android/key.properties`（同样不提交）：
 
 ```properties
-storeFile=<jks 绝对路径>
+# 绝对路径，或相对 android/ 的路径（如 keystore/local-test.jks）
+storeFile=<jks 路径>
 storePassword=<库密码>
 keyAlias=<别名>
 keyPassword=<key 密码>
+# 可选：标记为本地测试签名，版本名会追加 -local
+localTest=true
 ```
 
 未提供该文件时 release 构建自动降级为 debug 签名（仅供本地运行）。
+
+> 仓库内 `android/keystore/local-test.jks` 是**本地测试密钥**（口令与别名均为
+> `kabao-local-test`），只用于本机出包自测。它签出的包无法覆盖安装正式包，
+> 正式发布包始终由 GitHub Actions 用 Secrets 中的真实 keystore 构建。
 
 ## 目录结构
 
