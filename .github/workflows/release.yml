@@ -103,9 +103,12 @@ jobs:
         run: |
           # 手写的更新说明（docs/release-notes/<tag>.md）优先；缺失时留空，
           # 由 generate_release_notes 生成的提交列表兜底。
+          #
+          # 说明文件的第一行是 "# vX.Y.Z" 标题，而 Release 页面本身已经用
+          # name 显示版本号，正文再写一遍就会出现两个版本号。这里把它去掉。
           NOTES="docs/release-notes/${GITHUB_REF_NAME}.md"
           if [ -f "$NOTES" ]; then
-            cp "$NOTES" dist/RELEASE_NOTES.md
+            sed '1{/^# /d;}' "$NOTES" > dist/RELEASE_NOTES.md
           else
             : > dist/RELEASE_NOTES.md
           fi
@@ -123,6 +126,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          # Release 标题沿用 tag（如 v1.0.29），正文里不再重复版本号。
+          name: ${{ github.ref_name }}
           body_path: dist/RELEASE_NOTES.md
           files: |
             dist/kabao-*-arm64-v8a.apk
