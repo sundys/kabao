@@ -11,18 +11,23 @@ import '../../logic/documents_controller.dart';
 class DocumentDetailPage extends ConsumerWidget {
   const DocumentDetailPage({super.key, required this.document});
 
+  /// 路由传入的初始快照。展示数据来自 [documentRecordProvider]，编辑保存后
+  /// 会重新读取，避免停留在旧值。
   final DocumentRecord document;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 读取失败（例如证件已被删除）时回退到路由快照。
+    final current =
+        ref.watch(documentRecordProvider(document.id)).value ?? document;
     final theme = Theme.of(context);
     final rows = <(String, String)>[
-      if (document.holderName.isNotEmpty) ('姓名', document.holderName),
-      ('证件号', DocumentIdFormatting.groupForDisplay(document.idNumber)),
-      if (document.issuer.isNotEmpty) ('签发机关', document.issuer),
-      ('有效期限', document.validityLabel),
-      if (document.remark != null && document.remark!.isNotEmpty)
-        ('备注', document.remark!),
+      if (current.holderName.isNotEmpty) ('姓名', current.holderName),
+      ('证件号', DocumentIdFormatting.groupForDisplay(current.idNumber)),
+      if (current.issuer.isNotEmpty) ('签发机关', current.issuer),
+      ('有效期限', current.validityLabel),
+      if (current.remark != null && current.remark!.isNotEmpty)
+        ('备注', current.remark!),
     ];
 
     return Scaffold(
@@ -34,7 +39,7 @@ class DocumentDetailPage extends ConsumerWidget {
             tooltip: '编辑',
             onPressed: () => context.push(
               '/wallet/document/edit',
-              extra: (document: document, isNew: false),
+              extra: (document: current, isNew: false),
             ),
           ),
         ],

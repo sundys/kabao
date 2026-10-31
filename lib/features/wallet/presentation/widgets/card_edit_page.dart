@@ -139,12 +139,15 @@ class _CardEditPageState extends ConsumerState<CardEditPage> {
         return;
       }
       if (ok) {
-        if (widget.isNew) {
-          context.pop();
-        } else {
-          context.pop();
-        }
+        context.pop();
       } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('保存失败，请重试')));
+      }
+    } on Object {
+      // 意外异常也要给出反馈，避免用户以为已保存而停在编辑页。
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('保存失败，请重试')));

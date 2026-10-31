@@ -12,38 +12,42 @@ import '../../logic/cards_controller.dart';
 class CardDetailPage extends ConsumerWidget {
   const CardDetailPage({super.key, required this.card});
 
+  /// 路由传入的初始快照（列表/搜索结果）。真正的展示数据来自
+  /// [cardRecordProvider]，保存编辑后会重新读取，避免停留在旧值。
   final CardRecord card;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 读取失败（例如卡片已被删除）时回退到路由快照，页面不至于空白。
+    final current = ref.watch(cardRecordProvider(card.id)).value ?? card;
     final theme = Theme.of(context);
-    final grouped = CardNumberValidation.groupForDisplay(card.cardNumber);
-    final holderName = TextSanitizer.clean(card.holderName);
-    final note = TextSanitizer.clean(card.note);
+    final grouped = CardNumberValidation.groupForDisplay(current.cardNumber);
+    final holderName = TextSanitizer.clean(current.holderName);
+    final note = TextSanitizer.clean(current.note);
     final rows = <(String, String)>[
       if (holderName != null) ('姓名', holderName),
-      if (TextSanitizer.clean(card.cardKind) != null)
-        ('卡种', TextSanitizer.clean(card.cardKind)!),
-      if (card.creditLimit != null)
+      if (TextSanitizer.clean(current.cardKind) != null)
+        ('卡种', TextSanitizer.clean(current.cardKind)!),
+      if (current.creditLimit != null)
         (
           '额度',
-          '¥${_formatAmount(card.creditLimit!)}'
-              '${card.includeInTotal ? '' : '（不计入总额）'}',
+          '¥${_formatAmount(current.creditLimit!)}'
+              '${current.includeInTotal ? '' : '（不计入总额）'}',
         ),
       ('卡号', grouped),
-      if (card.expiryMonth != null && card.expiryYear != null)
+      if (current.expiryMonth != null && current.expiryYear != null)
         (
           '有效期',
-          '${card.expiryMonth.toString().padLeft(2, '0')}/'
-              '${(card.expiryYear! % 100).toString().padLeft(2, '0')}',
+          '${current.expiryMonth.toString().padLeft(2, '0')}/'
+              '${(current.expiryYear! % 100).toString().padLeft(2, '0')}',
         ),
-      if (card.cvv != null && card.cvv!.isNotEmpty) ('CVV', card.cvv!),
-      if (card.uShieldExpiryDate != null)
+      if (current.cvv != null && current.cvv!.isNotEmpty) ('CVV', current.cvv!),
+      if (current.uShieldExpiryDate != null)
         (
           'U 盾证书到期日',
-          '${card.uShieldExpiryDate!.year}/'
-              '${card.uShieldExpiryDate!.month.toString().padLeft(2, '0')}/'
-              '${card.uShieldExpiryDate!.day.toString().padLeft(2, '0')}',
+          '${current.uShieldExpiryDate!.year}/'
+              '${current.uShieldExpiryDate!.month.toString().padLeft(2, '0')}/'
+              '${current.uShieldExpiryDate!.day.toString().padLeft(2, '0')}',
         ),
       if (note != null) ('备注', note),
     ];
@@ -60,7 +64,7 @@ class CardDetailPage extends ConsumerWidget {
             tooltip: '编辑',
             onPressed: () => context.push(
               '/wallet/card/edit',
-              extra: (card: card, isNew: false),
+              extra: (card: current, isNew: false),
             ),
           ),
         ],
